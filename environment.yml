@@ -11,4 +11,3 @@ dependencies:
   - xgboost
   - scikit-learn
   - munch
-  - tensorflow
