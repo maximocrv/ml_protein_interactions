@@ -6,7 +6,7 @@ Install [Anaconda/miniconda (latter takes less time to install)](https://docs.co
 
 Install the env with the following command:
 ```
-conda env create -f environment_cpu.yml
+conda env create -f environment.yml
 ```
 
 now activate the conda environment by typing 
