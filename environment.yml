@@ -1,0 +1,14 @@
+name: ml_protein_protein
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.8
+  - numpy
+  - matplotlib
+  - pytorch
+  - bayesian-optimization
+  - xgboost
+  - scikit-learn
+  - munch
+  - tensorflow
