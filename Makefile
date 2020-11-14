@@ -5,4 +5,4 @@ install-env:
 	conda env create -f environment.yml
 reinstall-env: remove-env install-env
 update-env:
-	conda env update --file environment.yml  --prune
+	conda env update -f environment.yml  --prune
