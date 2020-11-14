@@ -9,9 +9,14 @@ Install the env with the following command:
 conda env create -f environment.yml
 ```
 
-now activate the conda environment by typing
+Now activate the conda environment by typing:
 ```
 conda activate ml_protein_protein
+```
+
+If you need to update the environment use:
+```
+conda env update -f environment.yml
 ```
 
 If you want to make sure your files are pep8 compliant before commiting then create a pre-commit file in .git/hooks/
