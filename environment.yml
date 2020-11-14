@@ -2,6 +2,7 @@ name: ml_protein_protein
 channels:
   - conda-forge
   - defaults
+  - omnia
 dependencies:
   - python=3.8
   - numpy
@@ -11,3 +12,5 @@ dependencies:
   - xgboost
   - scikit-learn
   - munch
+  - openmm
+  - pdbfixer
