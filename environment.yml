@@ -16,3 +16,6 @@ dependencies:
   - pdbfixer
   - mdtraj
   - jupyterlab
+  - notebook
+  - pymol
+
