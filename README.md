@@ -1,6 +1,6 @@
 # ml_protein_protein
 
-Machine learning project investigating protein-protein interactions.
+The objective of this project is to reliably predict the relative binding affinity arising due to mutations in protein structures, which is an active field of research in protein engineering. 
 
 ## Requirements
 
