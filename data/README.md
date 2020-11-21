@@ -11,3 +11,4 @@ You will find the following files and directories:
 * `pdbs/`: contains the PDB files corresponding to the wild type complexes.
 * `pdbs_mutated/`: contains the PDB files corresponding to mutants of the complexes in `pdbs/`.
 * `skempi_v2.csv`: CSV file with information about the PDB complexes.
+* `affinity.csv`: contains the $\Delta\Delta G$ values for the mutant complexes.
