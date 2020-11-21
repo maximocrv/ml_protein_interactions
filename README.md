@@ -2,8 +2,6 @@
 
 Machine learning project investigating protein-protein interactions.
 
----
-
 ## Requirements
 
 * Anaconda or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) (latter takes less time to install) as your python distribution.

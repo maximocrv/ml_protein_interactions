@@ -1,4 +1,6 @@
 */*
+*/.*/*
+.*/*
 !pdbs/*
 !pdbs_mutated/*
 !/*.csv
