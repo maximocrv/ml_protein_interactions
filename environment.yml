@@ -19,4 +19,4 @@ dependencies:
   - jupyterlab
   - notebook
   - pymol-bundle
-
+  - parmed

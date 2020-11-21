@@ -1,0 +1,5 @@
+*/*
+!pdbs/*
+!pdbs_mutated/*
+!/*.csv
+!/*.txt
