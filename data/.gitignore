@@ -1,9 +1,0 @@
-*/*
-*/.*/*
-.*
-.*/*
-SKEMPI2_PDBs.tar
-!pdbs/*
-!pdbs_mutated/*
-!/*.csv
-!/*.txt

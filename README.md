@@ -8,6 +8,8 @@ Machine learning project investigating protein-protein interactions.
 
 > **Note**: due to the `pdbfixer` and `openmm` packages, this project is running on Python 3.7.
 
+> **Note**: having an Nvidia GPU available is highly recommended, although not necessary.
+
 ## Installation
 
 Install the env with the following command:

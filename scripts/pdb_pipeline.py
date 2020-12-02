@@ -1,5 +1,11 @@
 #!/bin/python
+# Run this script like:
+# script -q -c 'python pdb_pipeline.py' /dev/null | tee pdb_pipeline.out
+
+# TODO: replace os with pathlib
 import os
+from pathlib import Path
+from time import time
 import multiprocessing as mp
 
 # check if we are in a conda virtual env
@@ -7,10 +13,10 @@ try:
    os.environ["CONDA_DEFAULT_ENV"]
 except KeyError:
    print("\tPlease init the conda environment!\n")
-   exit()
+   exit(1)
 
 import numpy as np
-import pandas as pd
+# import pandas as pd
 
 import parmed as pmd
 import simtk.unit as su
@@ -21,18 +27,25 @@ from simtk.openmm.app import PDBFile
 
 DATA_PATH='../data/'
 
-PDBS_PATH = DATA_PATH + 'pdbs/'
-CLEANED_PDBS_PATH = DATA_PATH + 'pdbs_cleaned/'
+PDBS_PATH = DATA_PATH + 'pdbs_wt/'
 PDBS_OPENMM = DATA_PATH + 'openmm/'
 
 MUTATED_PDBS_PATH = DATA_PATH+'pdbs_mutated/'
-CLEANED_MUTATED_PDBS_PATH = DATA_PATH+'pdbs_mutated_cleaned/'
 MUTATED_PDBS_OPENMM = DATA_PATH + 'openmm_mutated/'
+
+# Number of interacting residues/particles considered
+# relevant to be stored in the features
+n_interactions = 256
+# max distance for two atoms to be considered 'interacting'. TODO: implement this
+inter_dist = 5 * su.angstrom
 
 def generate_features(ids0, ids1, forcefield, system, param):
     """
     ids0: ids of the atoms for the 1st protein
     ids1: ids of the atoms for the 2nd protein
+
+    IMPORTANT! `features` should be a dictionnary whose keys are the same as the
+                name of the folders being created in the simulation output.
     """
     # sources
     # https://en.wikipedia.org/wiki/Electrostatics
@@ -63,7 +76,7 @@ def generate_features(ids0, ids1, forcefield, system, param):
 
     # setup MD engine
     integrator = so.LangevinIntegrator(300*su.kelvin, 1/su.picosecond, 0.002*su.picoseconds)
-    platform = so.Platform.getPlatformByName('CPU')
+    platform = so.Platform.getPlatformByName('CUDA')
     simulation = so.app.Simulation(param.topology, system, integrator, platform)
 
     # set atom coordinates
@@ -76,76 +89,125 @@ def generate_features(ids0, ids1, forcefield, system, param):
     state = simulation.context.getState(getPositions=True)
     xyz = state.getPositions(asNumpy=True)
     D = np.linalg.norm(np.expand_dims(xyz[ids0], 1) - np.expand_dims(xyz[ids1], 0), axis=2) * su.angstrom
+
+    # print(D.shape, ids1.shape, ids0.shape)
+
+    # to choose the most relevant residues, we will choose those with smallest minimum distance to other
+    # residues from the oposite subunit.
+    min_dist_ids0 = np.argmin( D, axis=1 )
+    # copy since argsort modifies the matrix
+    D_copy = np.copy(D[range(D.shape[0]),min_dist_ids0])
+    ids1_interacting   = np.argsort( D_copy )[:n_interactions]
+    ids0_interacting   = min_dist_ids0[ids1_interacting]
+
+    D = D[np.ix_(ids1_interacting, ids0_interacting)]
+    S = S[np.ix_(ids1_interacting, ids0_interacting)]
+    Q = Q[np.ix_(ids1_interacting, ids0_interacting)]
+    E = E[np.ix_(ids1_interacting, ids0_interacting)]
+
+    # print(D.shape, S.shape, Q.shape, E.shape)
     
     # compute nonbonded potential energies
     U_LJ = (4.0 * E * (np.power(S/D, 12) - np.power(S/D, 6))).value_in_unit(su.kilojoule / su.mole)
     U_el = (k0 * Q / D).value_in_unit(su.kilojoule / su.mole)
     
+    # print(U_LJ.shape, U_el.shape)
+    
     # debug print
     # print(f"U_LJ = {np.sum(U_LJ):.2f} kJ/mol; U_elec = {np.sum(U_el):.2f} kJ/mol")
+    # print(U_LJ.shape, U_el.shape, D.shape)
 
-    features = pd.DataFrame(data={'U_LJ':[U_LJ], 'U_el':[U_el], 'Dist_matrix':[D]})
+    features = {'U_LJ':U_LJ, 'U_el':U_el, 'D_mat':D}
     return features
 
 def listdir_no_hidden():
-    for f in os.listdir(MUTATED_PDBS_PATH):
-        if not f.startswith('.'):
-            yield MUTATED_PDBS_PATH, CLEANED_MUTATED_PDBS_PATH, MUTATED_PDBS_OPENMM, f
-            return
-    for f in os.listdir(PDBS_PATH):
-        if not f.startswith('.'):
-            yield PDBS_PATH, CLEANED_PDBS_PATH, PDBS_OPENMM, f
+    """Generates the PDB file names to be cleaned and simulated.
+
+    Additionally, it creates the output directories if they are missing.
+    IMPORTANT! The name of the subfolders in the simulation output dir should
+                match the name of the keys in the `features` dictionnary. 
+    """
+    Path(MUTATED_PDBS_OPENMM).mkdir(parents=True, exist_ok=True)
+    Path(MUTATED_PDBS_OPENMM+'U_LJ/').mkdir(parents=True, exist_ok=True)
+    Path(MUTATED_PDBS_OPENMM+'U_el/').mkdir(parents=True, exist_ok=True)
+    Path(MUTATED_PDBS_OPENMM+'D_mat/').mkdir(parents=True, exist_ok=True)
+
+    Path(PDBS_OPENMM).mkdir(parents=True, exist_ok=True)
+    Path(PDBS_OPENMM+'U_LJ/').mkdir(parents=True, exist_ok=True)
+    Path(PDBS_OPENMM+'U_el/').mkdir(parents=True, exist_ok=True)
+    Path(PDBS_OPENMM+'D_mat/').mkdir(parents=True, exist_ok=True)
+
+    for f in Path(PDBS_PATH).glob('[!.]*.pdb'):
+        yield PDBS_PATH, PDBS_OPENMM, f.name
+
+    for f in Path(MUTATED_PDBS_PATH).glob('[!.]*.pdb'):
+        yield MUTATED_PDBS_PATH, MUTATED_PDBS_OPENMM, f.name
 
 def pdb_parser(file):
     return [[char for char in subchain] for subchain  in file.split('_')[1:3]]
 
 def pdb_clean_sim(args):
-    orig_dir, clean_dir, sim_dir, fname = args
-    # print(orig_dir, clean_dir, sim_dir, fname)
+    """ Main function to be executed in parallel.
+    """
+    orig_dir, sim_dir, fname = args
+    # print(orig_dir, sim_dir, fname)
     # clean PDB
-    if not os.path.exists(clean_dir + fname):
-        pdb = pmd.load_file(orig_dir + fname)
-        pdb.save(clean_dir + fname, overwrite=True)
+    pdb = pmd.load_file(orig_dir + fname)
+    pdb.save('/tmp/' + fname, overwrite=True)
 
-        fixer = PDBFixer(filename=clean_dir + fname)
-        fixer.findMissingResidues()
-        fixer.findNonstandardResidues()
-        fixer.replaceNonstandardResidues()
-        fixer.removeHeterogens(False)
-        fixer.findMissingAtoms()
-        fixer.addMissingAtoms()
-        fixer.addMissingHydrogens(7.0)
+    fixer = PDBFixer(filename='/tmp/' + fname)
+    Path('/tmp/' + fname).unlink()
+    fixer.findMissingResidues()
+    fixer.findNonstandardResidues()
+    # print(f'number of non-standard residues in {fname}: {len(fixer.nonstandardResidues)}')
+    fixer.replaceNonstandardResidues()
+    fixer.removeHeterogens(False)
+    fixer.findMissingAtoms()
+    fixer.addMissingAtoms()
+    fixer.addMissingHydrogens(7.0)
 
-        # fixer.addSolvent(fixer.topology.getUnitCellDimensions())
-
-        PDBFile.writeFile(fixer.topology, fixer.positions, \
-                          open(clean_dir+fname, 'w'))
-    else:
-        fixer = PDBFixer(filename=clean_dir + fname)
+    # fixer.addSolvent(fixer.topology.getUnitCellDimensions())
 
     # Run simulation
-    if not os.path.exists(sim_dir + fname):
+    try:
+        if not Path(sim_dir + fname).exists():
 
-        forcefield = so.app.ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
-        system = forcefield.createSystem(fixer.topology, nonbondedMethod=so.app.NoCutoff)
-        param = pmd.openmm.load_topology(fixer.topology, system=system, xyz=fixer.positions)
+            forcefield = so.app.ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
+            system = forcefield.createSystem(fixer.topology, nonbondedMethod=so.app.NoCutoff)
+            param = pmd.openmm.load_topology(fixer.topology, system=system, xyz=fixer.positions)
 
-        # get indices of atoms for the 2 interacting subunits 
-        # sub_unit_chains = pdb_parser(fname)
-        sub_unit_chains = [['A'],['B']]
-        # print(param.to_dataframe()['chain'])
-        ids0, ids1 = (np.where(param.to_dataframe()['chain'].isin(cids))[0] for cids in sub_unit_chains)
-        # print(sub_unit_chains,fname,ids0,ids1)
+            # get indices of atoms for the 2 interacting subunits 
+            sub_unit_chains = pdb_parser(fname)
+            # print(param.to_dataframe()['chain'])
+            ids0, ids1 = (np.where(param.to_dataframe()['chain'].isin(cids))[0] for cids in sub_unit_chains)
+            # print(sub_unit_chains,fname,ids0,ids1)
 
-        features = generate_features(ids0, ids1, forcefield, system, param)
+            features = generate_features(ids0, ids1, forcefield, system, param)
 
-        print(f'done simulating: {fname}')
-        # TODO: save features into directory
-        features.to_csv(sim_dir + fname.split('.')[0] + '.csv')
+            print(f'done simulating: {fname}')
+
+            basename = '.'.join(fname.split('.')[:-1])
+            for feature in features: 
+                # print('saving to: '+sim_dir + feature + '/' + basename + '.csv')
+                # print(feature, features[feature].shape)
+                # TODO: change save to binary format, less space and more information
+                # np.savetxt(sim_dir + feature + '/' + basename + '.csv', features[feature], delimiter=',')
+                np.save(sim_dir + feature + '/' + basename + '.npy', features[feature])
+
+            print(f'saved features: {fname}')
+    except Exception as e:
+        print(f'could not simulate: {fname} Exception: {e}')
+        return 1
+
+    return 0
 
 
 if __name__ == '__main__':
+    start_t = time()
+    # no. of PDBs that could not be simulated
+    n_unsimulatables = 0
     p = mp.Pool(5)
-    for _ in p.imap_unordered(pdb_clean_sim, listdir_no_hidden()):
-        pass
-    print('finished')
+    for unsim in p.imap_unordered(pdb_clean_sim, listdir_no_hidden()):
+        n_unsimulatables += unsim
+    exec_t = time() - start_t
+    print(f'finished in {exec_t}s could not simulate {n_unsimulatables} PDBs')
