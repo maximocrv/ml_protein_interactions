@@ -1,0 +1,13 @@
+*
+*/*
+*/.*/*
+.*
+.*/*
+SKEMPI2_PDBs.tar
+*.csv
+!.gitignore
+!skempi_v2_cleaned.csv
+!pdbs_wt/
+!pdbs_wt/*
+!pdbs_mutated/
+!pdbs_mutated/*
