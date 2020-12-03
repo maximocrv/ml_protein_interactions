@@ -96,8 +96,8 @@ def generate_features(ids0, ids1, forcefield, system, param):
     # residues from the oposite subunit.
     min_dist_ids0 = np.argmin( D, axis=1 )
     # copy since argsort modifies the matrix
-    D_copy = np.copy(D[range(D.shape[0]),min_dist_ids0])
-    ids1_interacting   = np.argsort( D_copy )[:n_interactions]
+    #D_copy = D[range(D.shape[0]),min_dist_ids0]
+    ids1_interacting   = np.argsort(D[:,min_dist_ids0])[:n_interactions]
     ids0_interacting   = min_dist_ids0[ids1_interacting]
 
     D = D[np.ix_(ids1_interacting, ids0_interacting)]
@@ -176,8 +176,10 @@ def pdb_clean_sim(args):
             system = forcefield.createSystem(fixer.topology, nonbondedMethod=so.app.NoCutoff)
             param = pmd.openmm.load_topology(fixer.topology, system=system, xyz=fixer.positions)
 
+            basename = '.'.join(fname.split('.')[:-1])
+
             # get indices of atoms for the 2 interacting subunits 
-            sub_unit_chains = pdb_parser(fname)
+            sub_unit_chains = pdb_parser(basename)
             # print(param.to_dataframe()['chain'])
             ids0, ids1 = (np.where(param.to_dataframe()['chain'].isin(cids))[0] for cids in sub_unit_chains)
             # print(sub_unit_chains,fname,ids0,ids1)
@@ -186,7 +188,6 @@ def pdb_clean_sim(args):
 
             print(f'done simulating: {fname}')
 
-            basename = '.'.join(fname.split('.')[:-1])
             for feature in features: 
                 # print('saving to: '+sim_dir + feature + '/' + basename + '.csv')
                 # print(feature, features[feature].shape)
