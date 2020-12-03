@@ -219,9 +219,9 @@ def train(model, criterion, dataset_train, dataset_test, optimizer, num_epochs):
             # Evaluate the network (forward pass)
             # TODO: solve allocation error in GPU
             prediction = model(batch_x)
-            mse_test.append(criterion(prediction, batch_y))
-
-        print("Epoch {} | Train loss: {:.5f} Test loss: {:.5f}".format(epoch, train_loss, sum(mse_test).item()/len(mse_test)))
+            mse_test.append(criterion(prediction, batch_y).item())
+            # ^^ could be source of memory leak
+        print("Epoch {} | Train loss: {:.5f} Test loss: {:.5f}".format(epoch, train_loss, sum(mse_test)/len(mse_test)))
 
 model = HydraNet()
 num_epochs = 200
