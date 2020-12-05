@@ -15,7 +15,7 @@ from sklearn.datasets import make_moons
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold, train_test_split
 
-from scripts.utilities import load_data
+from utilities import load_data
 
 
 def train_model_bayes_opt(train_dmatrix: xgb.DMatrix, model_settings: dict) -> Tuple[xgb.XGBClassifier, dict]:

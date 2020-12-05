@@ -11,7 +11,7 @@ from sklearn.linear_model import LinearRegression
 from torch.utils.data import TensorDataset, DataLoader
 from sklearn.model_selection import train_test_split, KFold
 
-from scripts.utilities import load_data
+from utilities import load_data
 
 
 def gen_model_data(x: np.array, y: np.array, random_state=1):
@@ -132,7 +132,7 @@ if __name__ == "__main__":
             optimizer = torch.optim.Adam(model.parameters(), lr=params[2])
 
             train_loss, val_loss = train_model(model, x_kftrain, y_kftrain, x_kfval, y_kfval,
-                                               epochs, batch_size, optimizer, test_metric)
+                                               epochs, batch_size, optimizer, criterion, test_metric)
 
             train_losses_kf.append(train_loss)
             val_losses_kf.append(val_loss)
