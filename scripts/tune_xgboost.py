@@ -110,5 +110,5 @@ if __name__ == "__main__":
 
     # model = xgb.train(params, d_train_mat, evals=[(d_test_mat, "test")])
 
-    d_test_mat = xgb.DMatrix(x_test, y_test)
-    model.eval(d_test_mat)
+#    d_test_mat = xgb.DMatrix(x_test, y_test)
+#    model.eval(d_test_mat)
