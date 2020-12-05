@@ -92,18 +92,37 @@ def generate_features(ids0, ids1, forcefield, system, param):
 
     # print(D.shape, ids1.shape, ids0.shape)
 
-    # to choose the most relevant residues, we will choose those with smallest minimum distance to other
-    # residues from the oposite subunit.
-    min_dist_ids0 = np.argmin( D, axis=1 )
-    # copy since argsort modifies the matrix
-    #D_copy = D[range(D.shape[0]),min_dist_ids0]
-    ids1_interacting   = np.argsort(D[:,min_dist_ids0])[:n_interactions]
-    ids0_interacting   = min_dist_ids0[ids1_interacting]
+    # to choose the most relevant residues, we will first choose the pair of atoms with the
+    # lowest distance, and then extract a submatrix around it.
+    # This way we preserve the chain order of the distance matrix.
+    min_i = np.argmin(D)
+    min_r, min_c = int(min_i/D.shape[1]), min_i%D.shape[1]
+    # print(f'minimum distance: {np.min(D)}    position: {(min_r, min_c)}')
+    
+    ids0_min, ids0_max = min_r-n_interactions/2, min_r+n_interactions/2
+    ids1_min, ids1_max = min_c-n_interactions/2, min_c+n_interactions/2
+    
+    if ids0_min < 0:
+        ids0_max -= ids0_min
+        ids0_min = 0
+    elif ids0_max >= D.shape[0]:
+        ids0_min -= ids0_max - D.shape[0] + 1
+        ids0_max = D.shape[0]-1
+        
+    if ids1_min < 0:
+        ids1_max -= ids1_min
+        ids1_min = 0
+    elif ids1_max >= D.shape[1]:
+        ids1_min -= ids1_max - D.shape[1] + 1
+        ids1_max = D.shape[1]-1
+    
+    ids0_interacting = np.arange(ids0_min, ids0_max, dtype=np.int32)
+    ids1_interacting = np.arange(ids1_min, ids1_max, dtype=np.int32)
 
-    D = D[np.ix_(ids1_interacting, ids0_interacting)]
-    S = S[np.ix_(ids1_interacting, ids0_interacting)]
-    Q = Q[np.ix_(ids1_interacting, ids0_interacting)]
-    E = E[np.ix_(ids1_interacting, ids0_interacting)]
+    D = D[np.ix_(ids0_interacting, ids1_interacting)]
+    S = S[np.ix_(ids0_interacting, ids1_interacting)]
+    Q = Q[np.ix_(ids0_interacting, ids1_interacting)]
+    E = E[np.ix_(ids0_interacting, ids1_interacting)]
 
     # print(D.shape, S.shape, Q.shape, E.shape)
     
@@ -151,54 +170,53 @@ def pdb_clean_sim(args):
     """
     orig_dir, sim_dir, fname = args
     # print(orig_dir, sim_dir, fname)
-    # clean PDB
-    pdb = pmd.load_file(orig_dir + fname)
-    pdb.save('/tmp/' + fname, overwrite=True)
-
-    fixer = PDBFixer(filename='/tmp/' + fname)
-    Path('/tmp/' + fname).unlink()
-    fixer.findMissingResidues()
-    fixer.findNonstandardResidues()
-    # print(f'number of non-standard residues in {fname}: {len(fixer.nonstandardResidues)}')
-    fixer.replaceNonstandardResidues()
-    fixer.removeHeterogens(False)
-    fixer.findMissingAtoms()
-    fixer.addMissingAtoms()
-    fixer.addMissingHydrogens(7.0)
-
-    # fixer.addSolvent(fixer.topology.getUnitCellDimensions())
-
-    # Run simulation
-    try:
-        if not Path(sim_dir + fname).exists():
-
+    if not Path(sim_dir + fname).exists():
+        # clean PDB
+        pdb = pmd.load_file(orig_dir + fname)
+        pdb.save('/tmp/' + fname, overwrite=True)
+    
+        fixer = PDBFixer(filename='/tmp/' + fname)
+        Path('/tmp/' + fname).unlink()
+        fixer.findMissingResidues()
+        fixer.findNonstandardResidues()
+        # print(f'number of non-standard residues in {fname}: {len(fixer.nonstandardResidues)}')
+        fixer.replaceNonstandardResidues()
+        fixer.removeHeterogens(False)
+        fixer.findMissingAtoms()
+        fixer.addMissingAtoms()
+        fixer.addMissingHydrogens(7.0)
+    
+        # fixer.addSolvent(fixer.topology.getUnitCellDimensions())
+    
+        # Run simulation
+        try:
             forcefield = so.app.ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
             system = forcefield.createSystem(fixer.topology, nonbondedMethod=so.app.NoCutoff)
             param = pmd.openmm.load_topology(fixer.topology, system=system, xyz=fixer.positions)
-
+    
             basename = '.'.join(fname.split('.')[:-1])
-
+    
             # get indices of atoms for the 2 interacting subunits 
             sub_unit_chains = pdb_parser(basename)
             # print(param.to_dataframe()['chain'])
             ids0, ids1 = (np.where(param.to_dataframe()['chain'].isin(cids))[0] for cids in sub_unit_chains)
             # print(sub_unit_chains,fname,ids0,ids1)
-
+    
             features = generate_features(ids0, ids1, forcefield, system, param)
-
+    
             print(f'done simulating: {fname}')
-
+    
             for feature in features: 
                 # print('saving to: '+sim_dir + feature + '/' + basename + '.csv')
                 # print(feature, features[feature].shape)
-                # TODO: change save to binary format, less space and more information
                 # np.savetxt(sim_dir + feature + '/' + basename + '.csv', features[feature], delimiter=',')
                 np.save(sim_dir + feature + '/' + basename + '.npy', features[feature])
-
+    
             print(f'saved features: {fname}')
-    except Exception as e:
-        print(f'could not simulate: {fname} Exception: {e}')
-        return 1
+
+        except Exception as e:
+            print(f'could not simulate: {fname} Exception: {e}')
+            return 1
 
     return 0
 
