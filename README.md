@@ -34,9 +34,9 @@ conda env remove -n ml_protein_protein
 
 Thereafter you have to run `conda deactivate` and you will be able to reinstall everything properly. 
 
-> A `Makefile` already provides these commnads for faster access. Simply run `make install-env`.
+> A `Makefile` already provides these commands for faster access. Simply run `make install-env`.
 
-If you want to make sure your files are pep8 compliant before commiting then create a pre-commit file in .git/hooks/
+If you want to make sure your files are pep8 compliant before committing then create a pre-commit file in .git/hooks/
 with the following content:
 ```
 #!/bin/sh

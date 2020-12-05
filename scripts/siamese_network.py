@@ -16,10 +16,11 @@ from scipy.stats import pearsonr
 
 # check if we are in a conda virtual env
 try:
-   os.environ["CONDA_DEFAULT_ENV"]
+    os.environ["CONDA_DEFAULT_ENV"]
 except KeyError:
-   print("\tPlease init the conda environment!\n")
-   exit(1)
+    print("\tPlease init the conda environment!\n")
+    exit(1)
+
 
 def standardize(arr):
     return (arr - np.mean(arr)) / np.std(arr)
@@ -31,8 +32,9 @@ MUT_FEATURE_PATH=DATA_PATH + 'openmm_mutated/'
 
 R = (8.314/4184)  # kcal mol^-1 K^-1
 
+
 def siamese_preprocessing(pandas_row):
-    name_wt  = pandas_row[1].iloc[0]
+    name_wt = pandas_row[1].iloc[0]
     name_mut = pandas_row[1].iloc[0] + '_' + pandas_row[1].iloc[2].replace(',', '_')
 
     if not Path(MUT_FEATURE_PATH + 'D_mat/' + name_mut + '.npy').exists():
@@ -42,20 +44,20 @@ def siamese_preprocessing(pandas_row):
         print(f'ERROR: {name_wt} does not exist.', '\n')
         return None
 
-    d_mat_wt  = standardize(np.load(WT_FEATURE_PATH + 'D_mat/' + name_wt +'.npy'))
-    u_lj_wt   = standardize(np.load(WT_FEATURE_PATH + 'U_LJ/' + name_wt +'.npy'))
-    u_el_wt   = standardize(np.load(WT_FEATURE_PATH + 'U_el/' + name_wt +'.npy'))
+    d_mat_wt = standardize(np.load(WT_FEATURE_PATH + 'D_mat/' + name_wt + '.npy'))
+    u_lj_wt = standardize(np.load(WT_FEATURE_PATH + 'U_LJ/' + name_wt + '.npy'))
+    u_el_wt = standardize(np.load(WT_FEATURE_PATH + 'U_el/' + name_wt + '.npy'))
 
     wt_arr = np.stack([d_mat_wt, u_lj_wt, u_el_wt])
 
     d_mat_mut = standardize(np.load(MUT_FEATURE_PATH + 'D_mat/' + name_mut + '.npy'))
-    u_lj_mut  = standardize(np.load(MUT_FEATURE_PATH + 'U_LJ/' + name_mut + '.npy'))
-    u_el_mut  = standardize(np.load(MUT_FEATURE_PATH + 'U_el/' + name_mut + '.npy'))
+    u_lj_mut = standardize(np.load(MUT_FEATURE_PATH + 'U_LJ/' + name_mut + '.npy'))
+    u_el_mut = standardize(np.load(MUT_FEATURE_PATH + 'U_el/' + name_mut + '.npy'))
 
     mut_arr = np.stack([d_mat_mut, u_lj_mut, u_el_mut])
 
     # calculate DDG
-    A_wt  = pandas_row[1]['Affinity_wt_parsed']
+    A_wt = pandas_row[1]['Affinity_wt_parsed']
     A_mut = pandas_row[1]['Affinity_mut_parsed']
     
     # print(pandas_row[1]['Temperature'])
@@ -70,7 +72,8 @@ def siamese_preprocessing(pandas_row):
     # debug print
     print(f'parsed {name_mut}')
 
-    return (np.stack([wt_arr, mut_arr]), DDG)
+    return np.stack([wt_arr, mut_arr]), DDG
+
 
 def gen_loaders(x_tr, x_te, y_tr, y_te, batch_size):    
     x_train_tensor, x_test_tensor = torch.from_numpy(x_tr), torch.from_numpy(x_te)
@@ -83,37 +86,6 @@ def gen_loaders(x_tr, x_te, y_tr, y_te, batch_size):
     test_loader = DataLoader(dataset=test_data, batch_size=batch_size, shuffle=False)
     
     return train_loader, test_loader
-
-#if __name__ == '__main__':
-df = pd.read_csv(SKEMPI_CSV, sep=';')
-
-df=df.iloc[:4096,:]
-
-# filter duplicated
-df = df[~df.duplicated(subset=["#Pdb", "Mutation(s)_cleaned"])]
-
-# remove without target
-df = df.dropna(subset=['Affinity_mut_parsed'])
-df = df.dropna(subset=['Affinity_wt_parsed'])
-df = df.dropna(subset=['Temperature'])
-
-input_list = []
-target_list = []
-
-n_non_existant = 0
-for data in mp.Pool(5).imap_unordered(siamese_preprocessing, df.iterrows()):
-    if data is None:
-        n_non_existant += 1
-    else:
-        input_list.append(data[0])
-        target_list.append(data[1])
-
-print(f'{n_non_existant} PDBs do not have features.')
-
-input_arr = np.array(input_list).astype(np.float32)
-target_arr = np.array(target_list).astype(np.float32)[...,np.newaxis]
-x_tr, x_te, y_tr, y_te = train_test_split(input_arr, target_arr, test_size=0.2, random_state=1)
-train_data, test_data = gen_loaders(x_tr, x_te, y_tr, y_te, 32)
 
 
 class HydraNet(nn.Module):
@@ -160,13 +132,9 @@ class HydraNet(nn.Module):
         # each output of self.cnn will have dimension 1024, so when concatenated we have 2048
         self.fc = nn.Sequential(nn.Linear(2048, 512),
                                 nn.ReLU(),
-                                nn.Linear(512, 128),
+                                nn.Linear(512, 64),
                                 nn.ReLU(),
-                                nn.Linear(128, 64),
-                                nn.ReLU(),
-                                nn.Linear(64, 32),
-                                nn.ReLU(),
-                                nn.Linear(32, 1))
+                                nn.Linear(64, 1))
 
     def forward(self, x1):
         output1 = self.cnn1(x1[:, 0])
@@ -179,68 +147,92 @@ class HydraNet(nn.Module):
 
         return self.fc(output5)
 
-def train(model, criterion, dataset_train, dataset_test, optimizer, num_epochs):
-    """
-    @param model: torch.nn.Module
-    @param criterion: torch.nn.modules.loss._Loss
-    @param dataset_train: torch.utils.data.DataLoader
-    @param dataset_test: torch.utils.data.DataLoader
-    @param optimizer: torch.optim.Optimizer
-    @param num_epochs: int
-    """
+
+def train(_model, _criterion, dataset_train, dataset_test, _optimizer, n_epochs):
     print("Starting training")
-    for epoch in range(num_epochs):
+    for epoch in range(n_epochs):
         # Train an epoch
-        model.train()
+        _model.train()
         train_losses=[]
         for batch_x, batch_y in dataset_train:
             batch_x, batch_y = batch_x.to(device), batch_y.to(device)
 
             # Evaluate the network (forward pass)
-            logits = model.forward(batch_x)
-            loss = criterion(logits, batch_y)
+            logits = _model.forward(batch_x)
+            loss = _criterion(logits, batch_y)
             train_losses.append(loss.item())
 
             # Compute the gradient
-            optimizer.zero_grad()
+            _optimizer.zero_grad()
             loss.backward()
 
             # Update the parameters of the model with a gradient step
-            optimizer.step()
+            _optimizer.step()
 
         train_loss=np.mean(train_losses)
 
         # Test the quality on the test set
-        model.eval()
+        _model.eval()
         mse_test = []
         for batch_x, batch_y in dataset_test:
             batch_x, batch_y = batch_x.to(device), batch_y.to(device)
 
             # Evaluate the network (forward pass)
             # TODO: solve allocation error in GPU
-            prediction = model(batch_x)
-            mse_test.append(criterion(prediction, batch_y).item())
+            prediction = _model(batch_x)
+            mse_test.append(_criterion(prediction, batch_y).item())
             # ^^ could be source of memory leak
         print("Epoch {} | Train loss: {:.5f} Test loss: {:.5f}".format(epoch, train_loss, sum(mse_test)/len(mse_test)))
 
-model = HydraNet()
-num_epochs = 200
-learning_rate = 1e-4
 
-# If a GPU is available 
-if not torch.cuda.is_available():
-    print('WARNING: using CPU.')
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if __name__ == '__main__':
+    df = pd.read_csv(SKEMPI_CSV, sep=';')
+    # df = df.iloc[:4096, :]
 
-# Train the logistic regression model with the Adam optimizer
-criterion = torch.nn.MSELoss() # MSE loss for regression
-model_hydra = HydraNet().to(device)
+    # filter duplicated
+    df = df[~df.duplicated(subset=["#Pdb", "Mutation(s)_cleaned"])]
 
-optimizer = torch.optim.Adam(model_hydra.parameters(), lr=learning_rate)
-train(model_hydra, criterion, train_data, test_data, optimizer, num_epochs)
+    # remove without target
+    df = df.dropna(subset=['Affinity_mut_parsed'])
+    df = df.dropna(subset=['Affinity_wt_parsed'])
+    df = df.dropna(subset=['Temperature'])
 
-model_hydra.eval()
-pred = model_hydra(torch.from_numpy(x_te).to(device))
-pred = pred.cpu().detach().numpy()
-R = pearsonr(y_te.squeeze(), pred.squeeze())[0]
-print(f'Pearson R score: {R:.5}')
+    input_list = []
+    target_list = []
+
+    n_non_existant = 0
+    for data in mp.Pool(5).imap_unordered(siamese_preprocessing, df.iterrows()):
+        if data is None:
+            n_non_existant += 1
+        else:
+            input_list.append(data[0])
+            target_list.append(data[1])
+
+    print(f'{n_non_existant} PDBs do not have features.')
+
+    input_arr = np.array(input_list).astype(np.float32)
+    target_arr = np.array(target_list).astype(np.float32)[...,np.newaxis]
+    x_tr, x_te, y_tr, y_te = train_test_split(input_arr, target_arr, test_size=0.2, random_state=1)
+    train_data, test_data = gen_loaders(x_tr, x_te, y_tr, y_te, 32)
+
+    model = HydraNet()
+    num_epochs = 200
+    learning_rate = 1e-4
+
+    # If a GPU is available
+    if not torch.cuda.is_available():
+        print('WARNING: using CPU.')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Train the logistic regression model with the Adam optimizer
+    criterion = torch.nn.MSELoss()  # MSE loss for regression
+    model_hydra = HydraNet().to(device)
+
+    optimizer = torch.optim.Adam(model_hydra.parameters(), lr=learning_rate)
+    train(model_hydra, criterion, train_data, test_data, optimizer, num_epochs)
+
+    model_hydra.eval()
+    pred = model_hydra(torch.from_numpy(x_te).to(device))
+    pred = pred.cpu().detach().numpy()
+    R = pearsonr(y_te.squeeze(), pred.squeeze())[0]
+    print(f'Pearson R score: {R:.5}')

@@ -7,14 +7,15 @@ from typing import Union, Tuple, Dict
 import numpy as np
 import pandas as pd
 import xgboost as xgb
-
-from bayes_opt import BayesianOptimization
 from munch import munchify
-from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold, train_test_split
-from sklearn.multiclass import OneVsRestClassifier
+from bayes_opt import BayesianOptimization
 from sklearn.metrics import accuracy_score
+from sklearn.multiclass import OneVsRestClassifier
 from sklearn.datasets import make_moons
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold, train_test_split
+
+from scripts.utilities import load_data
 
 
 def train_model_bayes_opt(train_dmatrix: xgb.DMatrix, model_settings: dict) -> Tuple[xgb.XGBClassifier, dict]:
@@ -38,7 +39,7 @@ def train_model_bayes_opt(train_dmatrix: xgb.DMatrix, model_settings: dict) -> T
         cv_result = xgb.cv(params, train_dmatrix, num_boost_round=int(num_boost_round), nfold=model_settings.n_fold,
                            early_stopping_rounds=model_settings.early_stopping_rounds)
         # note that BO maximizes the output of the function (so if loss is the output, return the negative loss)
-        return 1 * cv_result[f'test-{model_settings.eval_metric}-mean'].iloc[-1]
+        return -1 * cv_result[f'test-{model_settings.eval_metric}-mean'].iloc[-1]
 
     model_settings = munchify(model_settings)
 
@@ -75,9 +76,10 @@ def train_model_bayes_opt(train_dmatrix: xgb.DMatrix, model_settings: dict) -> T
 
 
 if __name__ == "__main__":
-    X, y = make_moons(10000, noise=0.3, random_state=0) 
-    X = StandardScaler().fit_transform(X)
-    x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=.4, random_state=42)
+    X, y = load_data()
+    x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=.2, random_state=42)
+    # still have to perform feature expansion
+
     d_train_mat = xgb.DMatrix(x_train, y_train)
 
     # parameter ranges for bayesian optimization
@@ -95,33 +97,18 @@ if __name__ == "__main__":
         'seed': 1,
         # objective dictates learning task (and is used to obtain evaluation metric) 
         # refer to learning task parameters under https://xgboost.readthedocs.io/en/latest/parameter.html
-        'objective': 'binary:hinge',
-        'eval_metric': 'map',
+        'objective': 'reg:squarederror',
+        'eval_metric': 'rmse',
         # the following two params are parameters for bayesian optimization, not for actual xgboost
         'n_bayesian_optimization_iterations': 15,
         'n_init_points_bayesian_optimization': 6
     }
-    
-    params = {
-    'max_depth':6,
-    'min_child_weight': 1,
-    'eta':.3,
-    'subsample': 1,
-    'colsample_bytree': 1,
-    'objective':'binary:hinge',
-    "eval_metric": "map"
-    } 
-
-    d_test_mat = xgb.DMatrix(x_test, y_test)
-    # model = xgb.train(params, d_train_mat, evals=[(d_test_mat, "test")])
-
-    # cv_result = xgb.cv(params, d_train_mat, nfold=5)
-    # print(cv_result)
 
     model, paras, cv_result = train_model_bayes_opt(d_train_mat, bayes_dictionary)
 
     print('model: ', model, '\n', 'paras: ', paras, '\n ', 'cv_result: ', cv_result)
-    #https://ayguno.github.io/curious/portfolio/bayesian_optimization.html
-    #https://blog.cambridgespark.com/hyperparameter-tuning-in-xgboost-4ff9100a3b2f
-    #https://github.com/fmfn/BayesianOptimization
 
+    # model = xgb.train(params, d_train_mat, evals=[(d_test_mat, "test")])
+
+    d_test_mat = xgb.DMatrix(x_test, y_test)
+    model.eval(d_test_mat)
