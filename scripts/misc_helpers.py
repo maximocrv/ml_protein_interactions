@@ -2,6 +2,7 @@
 import numpy as np
 
 
+#TODO: don't need this
 def set_nan(x):
     """
     Converts all -999 entries to nans.
@@ -13,6 +14,7 @@ def set_nan(x):
     return x
 
 
+#TODO: don't need this
 def remove_constant_columns(x):
     """
     Removes columns containing one single value (be it np.nan or other values).
@@ -38,6 +40,7 @@ def remove_constant_columns(x):
     return x
 
 
+#TODO: don't need this
 def convert_nan(x, nan_mode='mode'):
     """
     Replace all -999 entries by the mean, median, or mode of their respective columns.
@@ -247,6 +250,7 @@ def split_data_jet(x):
     return ind_0, ind_1, ind_2
 
 
+#TODO: don't need this
 def preprocess_data(x, nan_mode):
     """
     Perform all the pre-processing steps to the input data. Removes unnecessary features based on intercorrelations in

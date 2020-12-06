@@ -15,8 +15,10 @@ from utilities import load_data
 
 
 def gen_model_data(x: np.array, y: np.array, random_state=1):
-    x_tr, x_te, y_tr, y_te = train_test_split(x, y, test_size=0.2, random_state=random_state)
-    x_tr, x_val, y_tr, y_val = train_test_split(x_tr, y_tr, test_size=0.25, random_state=random_state)
+    x_tr, x_te, y_tr, y_te = train_test_split(
+        x, y, test_size=0.2, random_state=random_state)
+    x_tr, x_val, y_tr, y_val = train_test_split(
+        x_tr, y_tr, test_size=0.25, random_state=random_state)
 
     return x_tr, y_tr, x_val, y_val, x_te, y_te
 
@@ -76,9 +78,10 @@ def train_model(_model, x_tr, y_tr, x_val, y_val, n_epochs, _batch_size, _optimi
         # print(f'std: {np.std(pred_np):10.5} {np.std(y_val_np):10.5}    shapes: {pred_np.shape} {y_val_np.shape}')
 
         total_val_loss.append(val_metric(y_val_np, pred_np))
-    
+
         if epoch % 50 == 0:
-            print(f'epoch {epoch:5} : train MSE loss={loss.item():10.5} val score={total_val_loss[-1]:10.5}') 
+            print(
+                f'epoch {epoch:5} : train MSE loss={loss.item():10.5} val score={total_val_loss[-1]:10.5}')
 
     return np.mean(total_train_loss), np.mean(total_val_loss)
 
@@ -90,7 +93,8 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     X, y = load_data()
-    x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=.2, random_state=42)
+    x_train, x_test, y_train, y_test = train_test_split(
+        X, y, test_size=.2, random_state=42)
 
     x_train = torch.from_numpy(x_train)
     x_test = torch.from_numpy(x_test)
@@ -102,7 +106,7 @@ if __name__ == "__main__":
 
     criterion = torch.nn.MSELoss()
     # (real_y, pred_y)
-    test_metric = lambda x, y: pearsonr(x, y)[0]  # r2_score
+    def test_metric(x, y): return pearsonr(x, y)[0]  # r2_score
 
     reg = LinearRegression().fit(x_train, y_train)
     reg_y = reg.predict(x_test)
@@ -114,21 +118,24 @@ if __name__ == "__main__":
     n_hidden_nodes = [16, 32, 64]
     learning_rates = [1e-3, 1e-2, 1e-1]
     batch_size = 32
-    hyperparam_space = itertools.product(n_hidden_layers, n_hidden_nodes, learning_rates)
+    hyperparam_space = itertools.product(
+        n_hidden_layers, n_hidden_nodes, learning_rates)
     kf = KFold(n_splits=5)
     epochs = 400
     CV_scores = []
     opt_val_score = None
     for params in hyperparam_space:
         # K-fold cross validation
-        print(f'hidden layers: {params[0]}, nodes per layer: {params[1]}, learning rate: {params[2]}')
+        print(
+            f'hidden layers: {params[0]}, nodes per layer: {params[1]}, learning rate: {params[2]}')
         train_losses_kf = []
         val_losses_kf = []
         for train_index, val_index in kf.split(x_train):
             x_kftrain, y_kftrain = x_train[train_index], y_train[train_index]
             x_kfval, y_kfval = x_train[val_index],   y_train[val_index]
 
-            model = MLP(input_dim=x_train.shape[1], layers=params[0], nodes=params[1], output_dim=1).to(device)
+            model = MLP(
+                input_dim=x_train.shape[1], layers=params[0], nodes=params[1], output_dim=1).to(device)
             optimizer = torch.optim.Adam(model.parameters(), lr=params[2])
 
             train_loss, val_loss = train_model(model, x_kftrain, y_kftrain, x_kfval, y_kfval,
@@ -140,7 +147,8 @@ if __name__ == "__main__":
         mean_train_loss = np.mean(train_losses_kf)
         mean_val_score = np.mean(val_losses_kf)
 
-        print(f'hyperparams.:{str(params):16} train_loss={mean_train_loss:12.5} val_score={mean_val_score:12.5}')
+        print(
+            f'hyperparams.:{str(params):16} train_loss={mean_train_loss:12.5} val_score={mean_val_score:12.5}')
 
         CV_scores.append(mean_val_score)
 
@@ -149,12 +157,15 @@ if __name__ == "__main__":
             opt_val_score = mean_val_score
             opt_params = params
 
-    print(f'best hyperparams.:{str(opt_params)} with validation score={opt_val_score:12.5}')
+    print(
+        f'best hyperparams.:{str(opt_params)} with validation score={opt_val_score:12.5}')
 
-    model = MLP(input_dim=x_train.shape[1], layers=opt_params[0], nodes=opt_params[1], output_dim=1).to(device)
+    model = MLP(input_dim=x_train.shape[1], layers=opt_params[0],
+                nodes=opt_params[1], output_dim=1).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=opt_params[2])
 
-    train_loss, test_loss = train_model(model, x_train, y_train, x_test, y_test, epochs, batch_size, optimizer, test_metric)
+    train_loss, test_loss = train_model(
+        model, x_train, y_train, x_test, y_test, epochs, batch_size, optimizer, test_metric)
 
     print(f'final MSE train loss: {train_loss} final test score: {test_loss}')
 
