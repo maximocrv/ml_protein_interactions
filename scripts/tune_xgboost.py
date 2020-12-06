@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 from munch import munchify
+from scipy.stats import pearsonr
 from bayes_opt import BayesianOptimization
 from sklearn.metrics import accuracy_score
 from sklearn.multiclass import OneVsRestClassifier
@@ -84,7 +85,7 @@ if __name__ == "__main__":
 
     # parameter ranges for bayesian optimization
     bayes_dictionary = {
-        'n_fold': 5,
+        'n_fold': 10,
         'early_stopping_rounds': 20,
         'max_depth_range': (3, 10),
         'gamma_range': (0, 15),
@@ -100,7 +101,7 @@ if __name__ == "__main__":
         'objective': 'reg:squarederror',
         'eval_metric': 'rmse',
         # the following two params are parameters for bayesian optimization, not for actual xgboost
-        'n_bayesian_optimization_iterations': 15,
+        'n_bayesian_optimization_iterations': 20,
         'n_init_points_bayesian_optimization': 6
     }
 
@@ -110,5 +111,5 @@ if __name__ == "__main__":
 
     # model = xgb.train(params, d_train_mat, evals=[(d_test_mat, "test")])
 
-#    d_test_mat = xgb.DMatrix(x_test, y_test)
-#    model.eval(d_test_mat)
+    d_test_mat = xgb.DMatrix(x_test, y_test)
+    model.eval(d_test_mat)

@@ -6,6 +6,9 @@ channels:
   - schrodinger
 dependencies:
   - python=3.7
+  - flake8
+  - jedi
+  - autopep8
   - numpy
   - matplotlib
   - pytorch
