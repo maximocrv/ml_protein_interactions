@@ -212,11 +212,11 @@ if __name__ == '__main__':
 
     input_arr = np.array(input_list).astype(np.float32)
     target_arr = np.array(target_list).astype(np.float32)[...,np.newaxis]
-    x_tr, x_te, y_tr, y_te = train_test_split(input_arr, target_arr, test_size=0.2, random_state=1)
-    train_data, test_data = gen_loaders(x_tr, x_te, y_tr, y_te, 32)
+    x_tr, x_te, y_tr, y_te = train_test_split(input_arr, target_arr, test_size=0.05, random_state=42)
+    train_data, test_data = gen_loaders(x_tr, x_te, y_tr, y_te, 16)
 
-    model = HydraNet()
-    num_epochs = 200
+    #model = HydraNet()
+    num_epochs = 2
     learning_rate = 1e-4
 
     # If a GPU is available
@@ -235,4 +235,5 @@ if __name__ == '__main__':
     pred = model_hydra(torch.from_numpy(x_te).to(device))
     pred = pred.cpu().detach().numpy()
     R = pearsonr(y_te.squeeze(), pred.squeeze())[0]
-    print(f'Pearson R score: {R:.5}')
+    print(f'Pearson R score: {R:.5}', '\n')
+    print(f'Test RMSE: {torch.sqrt(criterion(pred, y_te).item())}')

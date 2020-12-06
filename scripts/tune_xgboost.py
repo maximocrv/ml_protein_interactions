@@ -107,7 +107,7 @@ if __name__ == "__main__":
 
     model, paras, cv_result = train_model_bayes_opt(d_train_mat, bayes_dictionary)
 
-    print('model: ', model, '\n', 'paras: ', paras, '\n ', 'cv_result: ', cv_result)
+    #print('model: ', model, '\n', 'paras: ', paras, '\n ', 'cv_result: ', cv_result)
 
     # model = xgb.train(params, d_train_mat, evals=[(d_test_mat, "test")])
 
