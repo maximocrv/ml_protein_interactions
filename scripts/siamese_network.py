@@ -75,18 +75,14 @@ def siamese_preprocessing(pandas_row):
     return np.stack([wt_arr, mut_arr]), DDG
 
 
-def gen_loaders(x_tr, x_te, y_tr, y_te, batch_size):    
-    x_train_tensor, x_test_tensor = torch.from_numpy(x_tr), torch.from_numpy(x_te)
-    y_train_tensor, y_test_tensor = torch.from_numpy(y_tr), torch.from_numpy(y_te)
+def gen_loaders(x, y, batch_size):    
+    x_tensor, y_tensor = torch.from_numpy(x), torch.from_numpy(y)
     
-    train_data = TensorDataset(x_train_tensor, y_train_tensor)
-    train_loader = DataLoader(dataset=train_data, batch_size=batch_size, shuffle=False)
-    
-    test_data = TensorDataset(x_test_tensor, y_test_tensor)
-    test_loader = DataLoader(dataset=test_data, batch_size=batch_size, shuffle=False)
-    
-    return train_loader, test_loader
+    data = TensorDataset(x_tensor, y_tensor)
+   
+    loader = DataLoader(dataset=data, batch_size=batch_size, shuffle=False)
 
+    return loader
 
 class HydraNet(nn.Module):
     def __init__(self):
@@ -96,17 +92,19 @@ class HydraNet(nn.Module):
         self.cnn1 = nn.Sequential(nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3, stride=2), #output: (256-3)/2 + 1 =
                                  nn.ReLU(),
                                  nn.MaxPool2d(3, stride=2),
+                                 nn.BatchNorm2d(8),   
 
                                  nn.Conv2d(in_channels=8, out_channels=64, kernel_size=3, stride=2),
                                  nn.ReLU(),
                                  nn.MaxPool2d(3, stride=2),
+                                 nn.BatchNorm2d(64),
 
                                  nn.Conv2d(in_channels=64, out_channels=512, kernel_size=3),
                                  nn.ReLU(),
                                  nn.MaxPool2d(3, stride=2),
-                                 nn.Dropout2d(p=0.5),
+                                 nn.BatchNorm2d(512),
 
-                                 nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=3, stride=2),
+                                 nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=2),
                                  nn.ReLU(),
                                  nn.MaxPool2d(2)
                                 )
@@ -114,26 +112,30 @@ class HydraNet(nn.Module):
         self.cnn2 = nn.Sequential(nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3, stride=2), #output: (256-3)/2 + 1 =
                                  nn.ReLU(),
                                  nn.MaxPool2d(3, stride=2),
+                                 nn.BatchNorm2d(8),
 
                                  nn.Conv2d(in_channels=8, out_channels=64, kernel_size=3, stride=2),
                                  nn.ReLU(),
                                  nn.MaxPool2d(3, stride=2),
-
+                                 nn.BatchNorm2d(64),
+                                 
                                  nn.Conv2d(in_channels=64, out_channels=512, kernel_size=3),
                                  nn.ReLU(),
                                  nn.MaxPool2d(3, stride=2),
-                                 nn.Dropout2d(p=0.5),
-
-                                 nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=3, stride=2),
+                                 nn.BatchNorm2d(512),
+                                 
+                                 nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=2),
                                  nn.ReLU(),
                                  nn.MaxPool2d(2)
                                 )
 
         # each output of self.cnn will have dimension 1024, so when concatenated we have 2048
-        self.fc = nn.Sequential(nn.Linear(2048, 512),
+        self.fc = nn.Sequential(#nn.Linear(2048, 512),
+                                #nn.ReLU(),
+                                nn.Dropout2d(p=0.3),
+                                nn.Linear(2*512, 64),
                                 nn.ReLU(),
-                                nn.Linear(512, 64),
-                                nn.ReLU(),
+                                nn.Dropout2d(p=0.3),
                                 nn.Linear(64, 1))
 
     def forward(self, x1):
@@ -212,13 +214,17 @@ if __name__ == '__main__':
 
     input_arr = np.array(input_list).astype(np.float32)
     target_arr = np.array(target_list).astype(np.float32)[...,np.newaxis]
+    
     x_tr, x_te, y_tr, y_te = train_test_split(input_arr, target_arr, test_size=0.2, random_state=42)
-    x_tr, x_val, y_tr, y_val = train_test_split(x_tr, y_tr, test_size=0.25, random_state=42)
-    train_data, val_data = gen_loaders(x_tr, x_val, y_tr, y_val, 16)
+    #x_tr, x_val, y_tr, y_val = train_test_split(x_tr, y_tr, test_size=0.25, random_state=42)
+   
+    train_data = gen_loaders(x_tr, y_tr, 16)
+    #val_data = gen_loaders(x_val, y_val, 16)
+    test_data = gen_loaders(x_te, y_te, 16)
 
     #model = HydraNet()
-    num_epochs = 2 
-    learning_rate = 1e-4
+    num_epochs = 100 
+    learning_rate = 1e-3
 
     # If a GPU is available
     if not torch.cuda.is_available():
@@ -230,11 +236,12 @@ if __name__ == '__main__':
     model_hydra = HydraNet().to(device)
 
     optimizer = torch.optim.Adam(model_hydra.parameters(), lr=learning_rate)
-    train(model_hydra, criterion, train_data, val_data, optimizer, num_epochs)
+    # note that below validation data should actually be used...
+    train(model_hydra, criterion, train_data, test_data, optimizer, num_epochs)
 
-    model_hydra.eval()
-    pred = model_hydra(torch.from_numpy(x_te).to(device))
+    model_hydra.eval().to("cpu")
+    pred = model_hydra(torch.from_numpy(x_te))
     pred = pred.cpu().detach().numpy()
     R = pearsonr(y_te.squeeze(), pred.squeeze())[0]
     print(f'Pearson R score: {R:.5}', '\n')
-    print(f'Test RMSE: {torch.sqrt(criterion(pred.squeeze(), y_te.squeeze()).item())}')
+    print(f'Test RMSE: {torch.sqrt(criterion(torch.tensor(pred), torch.tensor(y_te)))}')

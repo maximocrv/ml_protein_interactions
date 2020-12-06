@@ -22,16 +22,10 @@ import parmed as pmd
 import simtk.unit as su
 import simtk.openmm as so
 from pdbfixer import PDBFixer
-from simtk.openmm.app import PDBFile
 
-
-DATA_PATH = '../data/'
-
-PDBS_PATH = DATA_PATH + 'pdbs_wt/'
-PDBS_OPENMM = DATA_PATH + 'openmm/'
-
-MUTATED_PDBS_PATH = DATA_PATH+'pdbs_mutated/'
-MUTATED_PDBS_OPENMM = DATA_PATH + 'openmm_mutated/'
+from constants import wt_features_path, wt_pdb_path, \
+                    mut_features_path, mut_pdb_path
+from utilities import open_file
 
 # Number of interacting residues/particles considered
 # relevant to be stored in the features
@@ -45,8 +39,8 @@ def generate_features(ids0, ids1, forcefield, system, param):
     ids0: ids of the atoms for the 1st protein
     ids1: ids of the atoms for the 2nd protein
 
-    IMPORTANT! `features` should be a dictionnary whose keys are the same as the
-                name of the folders being created in the simulation output.
+    IMPORTANT! `features` should be a dictionnary whose keys are the same as
+                the name of the folders being created in the simulation output.
     """
     # sources
     # https://en.wikipedia.org/wiki/Electrostatics
@@ -61,7 +55,8 @@ def generate_features(ids0, ids1, forcefield, system, param):
     # scaling factors
     k0 = (N * (e*e) / (4.0 * np.pi * eps0))
 
-    # get nonbonded interactions parameters for all atoms (Lennard-Jones and electrostatics)
+    # get nonbonded interactions parameters for all atoms
+    # (Lennard-Jones and electrostatics)
     epsilon = np.array([a.epsilon for a in param.atoms])
     sigma = np.array([a.sigma for a in param.atoms])
     charge = np.array([a.charge for a in param.atoms])
@@ -98,8 +93,8 @@ def generate_features(ids0, ids1, forcefield, system, param):
 
     # print(D.shape, ids1.shape, ids0.shape)
 
-    # to choose the most relevant residues, we will first choose the pair of atoms with the
-    # lowest distance, and then extract a submatrix around it.
+    # to choose the most relevant residues, we will first choose the pair of
+    # atoms with the lowest distance, and then extract a submatrix around it.
     # This way we preserve the chain order of the distance matrix.
     min_i = np.argmin(D)
     min_r, min_c = int(min_i/D.shape[1]), min_i % D.shape[1]
@@ -152,23 +147,23 @@ def listdir_no_hidden():
 
     Additionally, it creates the output directories if they are missing.
     IMPORTANT! The name of the subfolders in the simulation output dir should
-                match the name of the keys in the `features` dictionnary. 
+                match the name of the keys in the `features` dictionnary.
     """
-    Path(MUTATED_PDBS_OPENMM).mkdir(parents=True, exist_ok=True)
-    Path(MUTATED_PDBS_OPENMM+'U_LJ/').mkdir(parents=True, exist_ok=True)
-    Path(MUTATED_PDBS_OPENMM+'U_el/').mkdir(parents=True, exist_ok=True)
-    Path(MUTATED_PDBS_OPENMM+'D_mat/').mkdir(parents=True, exist_ok=True)
+    Path(mut_features_path).mkdir(parents=True, exist_ok=True)
+    Path(mut_features_path+'U_LJ/').mkdir(parents=True, exist_ok=True)
+    Path(mut_features_path+'U_el/').mkdir(parents=True, exist_ok=True)
+    Path(mut_features_path+'D_mat/').mkdir(parents=True, exist_ok=True)
 
-    Path(PDBS_OPENMM).mkdir(parents=True, exist_ok=True)
-    Path(PDBS_OPENMM+'U_LJ/').mkdir(parents=True, exist_ok=True)
-    Path(PDBS_OPENMM+'U_el/').mkdir(parents=True, exist_ok=True)
-    Path(PDBS_OPENMM+'D_mat/').mkdir(parents=True, exist_ok=True)
+    Path(wt_features_path).mkdir(parents=True, exist_ok=True)
+    Path(wt_features_path+'U_LJ/').mkdir(parents=True, exist_ok=True)
+    Path(wt_features_path+'U_el/').mkdir(parents=True, exist_ok=True)
+    Path(wt_features_path+'D_mat/').mkdir(parents=True, exist_ok=True)
 
-    for f in Path(PDBS_PATH).glob('[!.]*.pdb'):
-        yield PDBS_PATH, PDBS_OPENMM, f.name
+    for f in Path(wt_pdb_path).glob('[!.]*.pdb'):
+        yield wt_pdb_path, wt_features_path, f.name
 
-    for f in Path(MUTATED_PDBS_PATH).glob('[!.]*.pdb'):
-        yield MUTATED_PDBS_PATH, MUTATED_PDBS_OPENMM, f.name
+    for f in Path(mut_pdb_path).glob('[!.]*.pdb'):
+        yield mut_pdb_path, mut_features_path, f.name
 
 
 def pdb_parser(file):
@@ -237,6 +232,8 @@ def pdb_clean_sim(args):
 
 
 if __name__ == '__main__':
+    out_f = open_file('pdb_pipeline')
+
     start_t = time()
     # no. of PDBs that could not be simulated
     n_unsimulatables = 0
@@ -245,3 +242,9 @@ if __name__ == '__main__':
         n_unsimulatables += unsim
     exec_t = time() - start_t
     print(f'finished in {exec_t}s could not simulate {n_unsimulatables} PDBs')
+    out_f.write(
+        f'finished in {exec_t}s could not simulate {n_unsimulatables} PDBs\n')
+
+    out_f.close()
+else:
+    raise Exception('\tPlease execute this script directly.\n')

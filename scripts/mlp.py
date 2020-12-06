@@ -28,7 +28,7 @@ class MLP(torch.nn.Module):
         super().__init__()
         self.input = nn.Linear(input_dim, nodes)
         self.hidden = nn.ModuleList()
-        for l in range(layers):
+        for _ in range(layers):
             self.hidden.append(nn.Linear(nodes, nodes))
         self.out = nn.Linear(nodes, output_dim)
         self.relu = torch.nn.ReLU()
@@ -43,7 +43,9 @@ class MLP(torch.nn.Module):
         return self.out(x)
 
 
-def train_model(_model, x_tr, y_tr, x_val, y_val, n_epochs, _batch_size, _optimizer, _criterion, val_metric):
+#def train(_model, _criterion, dataset_train, dataset_test, _optimizer, n_epochs):
+def train(_model, x_tr, y_tr, x_val, y_val, n_epochs,
+          _batch_size, _optimizer, _criterion, val_metric):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     train_data = TensorDataset(x_tr.to(device), y_tr.to(device))
@@ -135,11 +137,16 @@ if __name__ == "__main__":
             x_kfval, y_kfval = x_train[val_index],   y_train[val_index]
 
             model = MLP(
-                input_dim=x_train.shape[1], layers=params[0], nodes=params[1], output_dim=1).to(device)
+                input_dim=x_train.shape[1],
+                layers=params[0],
+                nodes=params[1],
+                output_dim=1
+            ).to(device)
             optimizer = torch.optim.Adam(model.parameters(), lr=params[2])
 
-            train_loss, val_loss = train_model(model, x_kftrain, y_kftrain, x_kfval, y_kfval,
-                                               epochs, batch_size, optimizer, criterion, test_metric)
+            train_loss, val_loss = \
+                train(model, x_kftrain, y_kftrain, x_kfval, y_kfval,
+                      epochs, batch_size, optimizer, criterion, test_metric)
 
             train_losses_kf.append(train_loss)
             val_losses_kf.append(val_loss)
@@ -164,8 +171,9 @@ if __name__ == "__main__":
                 nodes=opt_params[1], output_dim=1).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=opt_params[2])
 
-    train_loss, test_loss = train_model(
-        model, x_train, y_train, x_test, y_test, epochs, batch_size, optimizer, test_metric)
+    train_loss, test_loss = \
+        train(model, x_train, y_train, x_test, y_test,
+              epochs, batch_size, optimizer, criterion, test_metric)
 
     print(f'final MSE train loss: {train_loss} final test score: {test_loss}')
 
