@@ -1,6 +1,4 @@
 #!/bin/python
-# Run this script like:
-# script -q -c 'python pdb_pipeline.py' /dev/null | tee pdb_pipeline.out
 
 import os
 
@@ -25,7 +23,7 @@ from pdbfixer import PDBFixer
 
 from constants import wt_features_path, wt_pdb_path, \
                     mut_features_path, mut_pdb_path
-from utilities import open_file
+from utilities import open_log
 
 # Number of interacting residues/particles considered
 # relevant to be stored in the features
@@ -232,7 +230,7 @@ def pdb_clean_sim(args):
 
 
 if __name__ == '__main__':
-    out_f = open_file('pdb_pipeline')
+    log = open_log('pdb_pipeline')
 
     start_t = time()
     # no. of PDBs that could not be simulated
@@ -242,9 +240,9 @@ if __name__ == '__main__':
         n_unsimulatables += unsim
     exec_t = time() - start_t
     print(f'finished in {exec_t}s could not simulate {n_unsimulatables} PDBs')
-    out_f.write(
+    log.write(
         f'finished in {exec_t}s could not simulate {n_unsimulatables} PDBs\n')
 
-    out_f.close()
+    log.close()
 else:
     raise Exception('\tPlease execute this script directly.\n')

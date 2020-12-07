@@ -91,16 +91,17 @@ class HydraNet(nn.Module):
                                   nn.Conv2d(in_channels=8, out_channels=64, kernel_size=3, stride=2),
                                   nn.ReLU(),
                                   nn.MaxPool2d(3, stride=2),
-                                  nn.BatchNorm2d(64),
+                                  nn.BatchNorm2d(64)
+                                  #nn.AvgPool2d()
 
-                                  nn.Conv2d(in_channels=64, out_channels=512, kernel_size=3),
-                                  nn.ReLU(),
-                                  nn.MaxPool2d(3, stride=2),
-                                  nn.BatchNorm2d(512),
+                                  #nn.Conv2d(in_channels=64, out_channels=512, kernel_size=3),
+                                  #nn.ReLU(),
+                                  #nn.MaxPool2d(3, stride=2),
+                                  #nn.BatchNorm2d(512),
 
-                                  nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=2),
-                                  nn.ReLU(),
-                                  nn.MaxPool2d(2)
+                                  #nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=2),
+                                  #nn.ReLU(),
+                                  #nn.MaxPool2d(2)
                                   )
 
         self.cnn2 = nn.Sequential(nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3, stride=2),
@@ -112,34 +113,37 @@ class HydraNet(nn.Module):
                                   nn.Conv2d(in_channels=8, out_channels=64, kernel_size=3, stride=2),
                                   nn.ReLU(),
                                   nn.MaxPool2d(3, stride=2),
-                                  nn.BatchNorm2d(64),
+                                  nn.BatchNorm2d(64)
+                                  #nn.AvgPool2d()  
 
-                                  nn.Conv2d(in_channels=64, out_channels=512, kernel_size=3),
-                                  nn.ReLU(),
-                                  nn.MaxPool2d(3, stride=2),
-                                  nn.BatchNorm2d(512),
+                                  #nn.Conv2d(in_channels=64, out_channels=512, kernel_size=3),
+                                  #nn.ReLU(),
+                                  #nn.MaxPool2d(3, stride=2),
+                                  #nn.BatchNorm2d(512),
 
-                                  nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=2),
-                                  nn.ReLU(),
-                                  nn.MaxPool2d(2)
+                                  #nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=2),
+                                  #nn.ReLU(),
+                                  #nn.MaxPool2d(2)
                                   )
 
         # each output of self.cnn will have dimension 1024, so when concatenated we have 2048
         self.fc = nn.Sequential(  # nn.Linear(2048, 512),
             # nn.ReLU(),
             nn.Dropout2d(p=0.3),
-            nn.Linear(2 * 512, 64),
+            nn.Linear(2 * 64, 32),
             nn.ReLU(),
             nn.Dropout2d(p=0.3),
-            nn.Linear(64, 1))
+            nn.Linear(32, 1))
 
     def forward(self, x1):
         output1 = self.cnn1(x1[:, 0])
+        output1 = torch.mean(output1.view(output1.size(0), output1.size(1), -1), dim=2)
         output2 = output1.view(output1.size()[0], -1)
 
         output3 = self.cnn2(x1[:, 1])
+        output3 = torch.mean(output3.view(output3.size(0), output3.size(1), -1), dim=2)
         output4 = output3.view(output3.size()[0], -1)
-
+        
         output5 = torch.cat((output2, output4), 1)
 
         return self.fc(output5)

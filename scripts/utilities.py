@@ -35,12 +35,12 @@ def data_preprocessor():
     pass
 
 
-def open_file(name):
+def open_log(name):
     """Open a file with the current time attached to its filename.
     this file will be created in a folder with the name provided
     in the argument.
     """
-    out_dir = f'{name}_out'
+    out_dir = f'log-{name}'
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     time_str = time.strftime('%d-%m-%yT%H:%M:%S')
     return open(f'{out_dir}/{name}.{time_str}.out', 'w')

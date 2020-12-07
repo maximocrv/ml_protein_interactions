@@ -1,6 +1,4 @@
 #!/bin/python
-# Run this script like:
-# script -q -c 'python preprocessing_mlp.py' /dev/null | tee preprocessing_mlp.out
 
 import os
 
@@ -21,7 +19,7 @@ import pandas as pd
 
 from constants import skempi_csv, wt_features_path, mut_features_path, \
                     mlp_features, R
-from utilities import open_file
+from utilities import open_log
 
 
 def get_mean_std(mat):
@@ -94,7 +92,7 @@ def preprocessing_mlp(pandas_row):
 
 
 if __name__ == '__main__':
-    out_f = open_file('preprocessing_mlp')
+    log = open_log('preprocessing_mlp')
 
     df = pd.read_csv(skempi_csv, sep=';')
 
@@ -106,9 +104,9 @@ if __name__ == '__main__':
     df = df.dropna(subset=['Affinity_wt_parsed'])
     df = df.dropna(subset=['Temperature'])
 
-    out_f.write('\tloaded SKEMPI dataset:\n')
-    out_f.write(str(df.head()))
-    out_f.write('\n')
+    log.write('\tloaded SKEMPI dataset:\n')
+    log.write(str(df.head()))
+    log.write('\n')
 
     df_out = pd.DataFrame(columns=[
         "mut", "d_mat_wt_mean", "d_mat_wt_std",
@@ -127,10 +125,10 @@ if __name__ == '__main__':
     print(str(df_out.head()))
     df_out.to_csv(mlp_features)
 
-    out_f.write(f'\t{n_non_existant} PDBs do not have features.\n')
-    out_f.write('\tMLP features:\n')
-    out_f.write(str(df_out.head()))
+    log.write(f'\t{n_non_existant} PDBs do not have features.\n')
+    log.write('\tMLP features:\n')
+    log.write(str(df_out.head()))
 
-    out_f.close()
+    log.close()
 else:
     raise Exception('\tPlease execute this script directly.\n')

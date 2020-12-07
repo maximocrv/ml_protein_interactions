@@ -12,6 +12,9 @@ from torch.utils.data import TensorDataset, DataLoader
 from sklearn.model_selection import train_test_split, KFold
 
 from utilities import load_data
+from train_helpers import train
+from utilities import open_log
+from constants import test_metrics
 
 
 def gen_model_data(x: np.array, y: np.array, random_state=1):
@@ -44,53 +47,56 @@ class MLP(torch.nn.Module):
 
 
 #def train(_model, _criterion, dataset_train, dataset_test, _optimizer, n_epochs):
-def train(_model, x_tr, y_tr, x_val, y_val, n_epochs,
-          _batch_size, _optimizer, _criterion, val_metric):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# def train(_model, x_tr, y_tr, x_val, y_val, n_epochs,
+          # _batch_size, _optimizer, _criterion, val_metric):
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    train_data = TensorDataset(x_tr.to(device), y_tr.to(device))
-    train_loader = DataLoader(dataset=train_data, batch_size=_batch_size)
+    # train_data = TensorDataset(x_tr.to(device), y_tr.to(device))
+    # train_loader = DataLoader(dataset=train_data, batch_size=_batch_size)
 
-    total_train_loss = []
-    total_val_loss = []
+    # total_train_loss = []
+    # total_val_loss = []
 
-    x_val = x_val.to(device)
-    y_val = y_val.to(device)
+    # x_val = x_val.to(device)
+    # y_val = y_val.to(device)
 
-    for epoch in range(n_epochs):
-        _model.train()
-        for batch_x, batch_y in train_loader:
+    # for epoch in range(n_epochs):
+        # _model.train()
+        # for batch_x, batch_y in train_loader:
 
-            y_pred = _model.forward(batch_x)
+            # y_pred = _model.forward(batch_x)
 
-            _optimizer.zero_grad()
-            loss = _criterion(y_pred.squeeze(), batch_y)
-            loss.backward()
+            # _optimizer.zero_grad()
+            # loss = _criterion(y_pred.squeeze(), batch_y)
+            # loss.backward()
 
-            _optimizer.step()
+            # _optimizer.step()
 
-            total_train_loss.append(loss.item())
+            # total_train_loss.append(loss.item())
 
-        _model.eval()
-        prediction = _model.forward(x_val)
-        pred_np = prediction.cpu().detach().numpy().squeeze()
-        y_val_np = y_val.cpu().detach().numpy()
+        # _model.eval()
+        # prediction = _model.forward(x_val)
+        # pred_np = prediction.cpu().detach().numpy().squeeze()
+        # y_val_np = y_val.cpu().detach().numpy()
 
-        # debug print
-        # print(f'std: {np.std(pred_np):10.5} {np.std(y_val_np):10.5}    shapes: {pred_np.shape} {y_val_np.shape}')
+        # # debug print
+        # # print(f'std: {np.std(pred_np):10.5} {np.std(y_val_np):10.5}    shapes: {pred_np.shape} {y_val_np.shape}')
 
-        total_val_loss.append(val_metric(y_val_np, pred_np))
+        # total_val_loss.append(val_metric(y_val_np, pred_np))
 
-        if epoch % 50 == 0:
-            print(
-                f'epoch {epoch:5} : train MSE loss={loss.item():10.5} val score={total_val_loss[-1]:10.5}')
+        # if epoch % 50 == 0:
+            # print(
+                # f'epoch {epoch:5} : train MSE loss={loss.item():10.5} val score={total_val_loss[-1]:10.5}')
 
-    return np.mean(total_train_loss), np.mean(total_val_loss)
+    # return np.mean(total_train_loss), np.mean(total_val_loss)
 
 
 if __name__ == "__main__":
+    log = open_log('MLP')
+
     if not torch.cuda.is_available():
         print('WARNING: using CPU.')
+        log.write('\tWARNING: using CPU.\n')
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -113,7 +119,7 @@ if __name__ == "__main__":
     reg = LinearRegression().fit(x_train, y_train)
     reg_y = reg.predict(x_test)
 
-    linreg_score = test_metric(y_test, reg_y)
+    linreg_score = test_metrics['pearsonr'](y_test, reg_y)
     print(f'Linear Regression test score: {linreg_score:10.5}')
 
     n_hidden_layers = [8, 16, 32]
@@ -144,6 +150,8 @@ if __name__ == "__main__":
             ).to(device)
             optimizer = torch.optim.Adam(model.parameters(), lr=params[2])
 
+        # def train(_model, _criterion, dataset_train, dataset_test, _optimizer,
+          # n_epochs, device, test_metrics, log):
             train_loss, val_loss = \
                 train(model, x_kftrain, y_kftrain, x_kfval, y_kfval,
                       epochs, batch_size, optimizer, criterion, test_metric)
@@ -171,6 +179,8 @@ if __name__ == "__main__":
                 nodes=opt_params[1], output_dim=1).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=opt_params[2])
 
+# def train(_model, _criterion, dataset_train, dataset_test, _optimizer,
+          # n_epochs, device, test_metrics, log):
     train_loss, test_loss = \
         train(model, x_train, y_train, x_test, y_test,
               epochs, batch_size, optimizer, criterion, test_metric)
@@ -178,3 +188,7 @@ if __name__ == "__main__":
     print(f'final MSE train loss: {train_loss} final test score: {test_loss}')
 
     print(f'Linear Regression test score: {linreg_score:10.5}')
+
+    log.close()
+else:
+    raise Exception('\tPlease execute this script directly.\n')
