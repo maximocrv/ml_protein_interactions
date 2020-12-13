@@ -1,6 +1,15 @@
-# ml_protein_protein
+## ml_protein_protein
 
 The objective of this project is to reliably predict the relative binding affinity arising due to mutations in protein structures, which is an active field of research in protein engineering. 
+
+## File Structure
+
+* `data`: This directory contains all the data required for training and validation.
+
+* `notebooks`: It contains the data_exploration.ipynb jupyter notebook which is used for visualising and exploring the dataset for this project. 
+
+* `scripts`: This directory contains all the Python scripts used for data acquisition, preprocessing, training and validation.
+
 
 ## Requirements
 

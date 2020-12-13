@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 from constants import skempi_csv, wt_features_path, mut_features_path, \
-                    mlp_features, R
+    mlp_features, R
 from utilities import open_log
 
 
@@ -41,23 +41,21 @@ def preprocessing_mlp(pandas_row):
     name_mut = pandas_row[1].iloc[0] + '_' + \
         pandas_row[1].iloc[2].replace(',', '_')
 
-    # matrix_features = ['D_mat', 'U_LJ', 'U_el']
-    # for feature in matrix_features:
-    #     pass
-
-    if not Path(mut_features_path + 'D_mat/' + name_mut + '.npy').exists():
+    if not Path(mut_features_path + name_mut + '.npy').exists():
         print(f'ERROR: {name_mut} does not exist.')
         return None
-    if not Path(wt_features_path + 'D_mat/' + name_wt + '.npy').exists():
+    if not Path(wt_features_path + name_wt + '.npy').exists():
         print(f'ERROR: {name_wt} does not exist.')
         return None
 
-    d_mat_wt = np.load(wt_features_path + 'D_mat/' + name_wt + '.npy')
-    d_mat_mut = np.load(mut_features_path + 'D_mat/' + name_mut + '.npy')
-    u_lj_wt = np.load(wt_features_path + 'U_LJ/' + name_wt + '.npy')
-    u_lj_mut = np.load(mut_features_path + 'U_LJ/' + name_mut + '.npy')
-    u_el_wt = np.load(wt_features_path + 'U_el/' + name_wt + '.npy')
-    u_el_mut = np.load(mut_features_path + 'U_el/' + name_mut + '.npy')
+    wt_tensor = np.load(wt_features_path + name_wt + '.npy')
+    mut_tensor = np.load(mut_features_path + name_mut + '.npy')
+    u_lj_wt = wt_tensor[0, :, :]
+    u_lj_mut = mut_tensor[0, :, :]
+    u_el_wt = wt_tensor[1, :, :]
+    u_el_mut = mut_tensor[1, :, :]
+    d_mat_wt = wt_tensor[2, :, :]
+    d_mat_mut = mut_tensor[2, :, :]
 
     d_mat_wt_mean, d_mat_wt_std = get_mean_std(d_mat_wt)
     u_lj_wt_mean, u_lj_wt_std = get_mean_std(u_lj_wt)

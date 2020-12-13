@@ -3,6 +3,8 @@ This script contains the functions used for training in the different models
 """
 
 import numpy as np
+import torch
+from torch.utils.data import TensorDataset, DataLoader
 
 
 def train(_model, _criterion, dataset_train, dataset_test, _optimizer,
@@ -44,11 +46,12 @@ def train(_model, _criterion, dataset_train, dataset_test, _optimizer,
     print("Starting training")
     log.write("\tStarting training\n")
     log.write('\n')
-    log.write("epoch\ttrain_loss\t{}".format('\t'.join(test_metrics.keys())))
+    log.write("epoch\ttrain_loss\t{}\n".format('\t'.join(test_metrics.keys())))
     for epoch in range(n_epochs):
         # Train an epoch
         _model.train()
         train_losses = []
+        # TODO: add batchnorm and dropout
         for batch_x, batch_y in dataset_train:
             batch_x, batch_y = batch_x.to(device), batch_y.to(device)
 
@@ -71,11 +74,20 @@ def train(_model, _criterion, dataset_train, dataset_test, _optimizer,
         eval_scores = {key: [] for key in test_metrics}
         n = 0
         for batch_x, batch_y in dataset_test:
-            batch_x, batch_y = batch_x.to(device), batch_y.to(device)
+            # to device
+            batch_x = batch_x.to(device)
 
             # Evaluate the network (forward pass)
             # TODO: solve allocation error in GPU
             prediction = _model(batch_x)
+
+            # back to host
+            prediction = prediction.cpu()
+
+            # fix tensors to be used with test metrics
+            # detach() excludes the tensor in the backprop caluclation
+            prediction = prediction.detach().numpy().ravel()
+            batch_y = batch_y.detach().numpy().ravel()
 
             # weighted sum of scores according to batch_y length
             for key, fun in test_metrics.items():
@@ -88,7 +100,7 @@ def train(_model, _criterion, dataset_train, dataset_test, _optimizer,
         eval_scores = {key: sum(eval_scores[key])/n for key in test_metrics}
         eval_scores_str = \
             ' '.join([f'{k}={v:12.5g}' for k, v in eval_scores.items()])
-        print("Epoch {} | Train loss: {:12.5g} Test scores: {:}".format(
+        print("Epoch {} | Train loss: {:12.5g} Test scores: {}".format(
             epoch, train_loss, eval_scores_str))
         log.write("{}\t{:12.5g}\t{}\n".format(
             epoch, train_loss,
@@ -96,3 +108,21 @@ def train(_model, _criterion, dataset_train, dataset_test, _optimizer,
         ))
 
     return train_loss, eval_scores
+
+
+def gen_loaders(x, y, batch_size):
+    """Generates the Batch loaders to use in the train loop."""
+    if type(x) == np.ndarray:
+        x_tensor = torch.from_numpy(x)
+    else:
+        x_tensor = x
+    if type(y) == np.ndarray:
+        y_tensor = torch.from_numpy(y)
+    else:
+        y_tensor = y
+
+    data = TensorDataset(x_tensor, y_tensor)
+
+    loader = DataLoader(dataset=data, batch_size=batch_size, shuffle=False)
+
+    return loader

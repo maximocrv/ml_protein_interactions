@@ -88,60 +88,60 @@ class HydraNet(nn.Module):
                                   nn.MaxPool2d(3, stride=2),
                                   nn.BatchNorm2d(8),
 
-                                  nn.Conv2d(in_channels=8, out_channels=64, kernel_size=3, stride=2),
+                                  nn.Conv2d(in_channels=8, out_channels=16, kernel_size=3, stride=2),
                                   nn.ReLU(),
                                   nn.MaxPool2d(3, stride=2),
-                                  nn.BatchNorm2d(64)
+                                  nn.BatchNorm2d(16),
                                   #nn.AvgPool2d()
 
-                                  #nn.Conv2d(in_channels=64, out_channels=512, kernel_size=3),
-                                  #nn.ReLU(),
-                                  #nn.MaxPool2d(3, stride=2),
-                                  #nn.BatchNorm2d(512),
+                                  nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3),
+                                  nn.ReLU(),
+                                  nn.MaxPool2d(3, stride=2),
+                                  nn.BatchNorm2d(32),
 
-                                  #nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=2),
-                                  #nn.ReLU(),
-                                  #nn.MaxPool2d(2)
+                                  nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=2),
+                                  nn.ReLU(),
+                                  nn.MaxPool2d(2)
                                   )
-
+                                  
         self.cnn2 = nn.Sequential(nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3, stride=2),
                                   # output: (256-3)/2 + 1 =
                                   nn.ReLU(),
                                   nn.MaxPool2d(3, stride=2),
                                   nn.BatchNorm2d(8),
 
-                                  nn.Conv2d(in_channels=8, out_channels=64, kernel_size=3, stride=2),
+                                  nn.Conv2d(in_channels=8, out_channels=16, kernel_size=3, stride=2),
                                   nn.ReLU(),
                                   nn.MaxPool2d(3, stride=2),
-                                  nn.BatchNorm2d(64)
+                                  nn.BatchNorm2d(16),
                                   #nn.AvgPool2d()  
 
-                                  #nn.Conv2d(in_channels=64, out_channels=512, kernel_size=3),
-                                  #nn.ReLU(),
-                                  #nn.MaxPool2d(3, stride=2),
-                                  #nn.BatchNorm2d(512),
+                                  nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3),
+                                  nn.ReLU(),
+                                  nn.MaxPool2d(3, stride=2),
+                                  nn.BatchNorm2d(32),
 
-                                  #nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=2),
-                                  #nn.ReLU(),
-                                  #nn.MaxPool2d(2)
+                                  nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=2),
+                                  nn.ReLU(),
+                                  nn.MaxPool2d(2)
                                   )
 
         # each output of self.cnn will have dimension 1024, so when concatenated we have 2048
         self.fc = nn.Sequential(  # nn.Linear(2048, 512),
             # nn.ReLU(),
             nn.Dropout2d(p=0.3),
-            nn.Linear(2 * 64, 32),
+            nn.Linear(2 * 32, 16),
             nn.ReLU(),
             nn.Dropout2d(p=0.3),
-            nn.Linear(32, 1))
+            nn.Linear(16, 1))
 
     def forward(self, x1):
         output1 = self.cnn1(x1[:, 0])
-        output1 = torch.mean(output1.view(output1.size(0), output1.size(1), -1), dim=2)
+        #output1 = torch.mean(output1.view(output1.size(0), output1.size(1), -1), dim=2)
         output2 = output1.view(output1.size()[0], -1)
 
         output3 = self.cnn2(x1[:, 1])
-        output3 = torch.mean(output3.view(output3.size(0), output3.size(1), -1), dim=2)
+        #output3 = torch.mean(output3.view(output3.size(0), output3.size(1), -1), dim=2)
         output4 = output3.view(output3.size()[0], -1)
         
         output5 = torch.cat((output2, output4), 1)
@@ -180,7 +180,7 @@ def train(_model, _criterion, dataset_train, dataset_test, _optimizer, n_epochs)
 
             # Evaluate the network (forward pass)
             # TODO: solve allocation error in GPU
-            prediction = _model(batch_x)
+            prediction = _model.forward(batch_x)
             mse_test.append(_criterion(prediction, batch_y).item())
             # ^^ could be source of memory leak
         print(
@@ -216,6 +216,7 @@ if __name__ == '__main__':
     target_arr = np.array(target_list).astype(np.float32)[..., np.newaxis]
 
     x_tr, x_te, y_tr, y_te = train_test_split(input_arr, target_arr, test_size=0.2, random_state=42)
+    print('x_tr: ', x_tr.shape, 'x_te: ', x_te.shape, 'y_tr: ', y_tr.shape, 'y_te: ', y_te.shape, '\n') 
     # x_tr, x_val, y_tr, y_val = train_test_split(x_tr, y_tr, test_size=0.25, random_state=42)
 
     train_data = gen_loaders(x_tr, y_tr, 16)
@@ -234,13 +235,14 @@ if __name__ == '__main__':
     # Train the logistic regression model with the Adam optimizer
     criterion = torch.nn.MSELoss()  # MSE loss for regression
     model_hydra = HydraNet().to(device)
-
-    optimizer = torch.optim.Adam(model_hydra.parameters(), lr=learning_rate)
+    
+    # perhaps add larger degree of weight decay
+    optimizer = torch.optim.Adam(model_hydra.parameters(), lr=learning_rate, weight_decay=1e-1)
     # note that below validation data should actually be used...
     train(model_hydra, criterion, train_data, test_data, optimizer, num_epochs)
 
     model_hydra.eval().to("cpu")
-    pred = model_hydra(torch.from_numpy(x_te))
+    pred = model_hydra.forward(torch.from_numpy(x_te))
     pred = pred.cpu().detach().numpy()
     R = pearsonr(y_te.squeeze(), pred.squeeze())[0]
     print(f'Pearson R score: {R:.5}', '\n')

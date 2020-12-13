@@ -309,7 +309,7 @@ def cross_channel_features(x):
     return cross_x
 
 
-def transform_data(x_tr, x_te, degree):
+def transform_data(x_tr, x_te, degree, cross=True, log=True):
     """
     Performs the data transformation and feature expansion on the input features. Concatenates the polynomial expansion
     basis, logarithmic basis (of positive columns), cross channel correlations, and the intercept term for the training
@@ -320,21 +320,30 @@ def transform_data(x_tr, x_te, degree):
     :param degree: Degree of the polynomial basis.
     :return: Transformed, horizontally concatenated input feature matrix.
     """
-    x_tr_cross = cross_channel_features(x_tr)
-    x_te_cross = cross_channel_features(x_te)
+    if cross:
+        x_tr_cross = cross_channel_features(x_tr)
+        x_te_cross = cross_channel_features(x_te)
 
-    neg_cols_te = np.any(x_tr <= 0, axis=0)
-    neg_cols_tr = np.any(x_te <= 0, axis=0)
-    neg_cols = np.logical_or(neg_cols_te, neg_cols_tr)
+    if log:
+        neg_cols_te = np.any(x_tr <= 0, axis=0)
+        neg_cols_tr = np.any(x_te <= 0, axis=0)
+        neg_cols = np.logical_or(neg_cols_te, neg_cols_tr)
 
-    x_tr_log = np.log(x_tr[:, ~neg_cols])
-    x_te_log = np.log(x_te[:, ~neg_cols])
+        x_tr_log = np.log(x_tr[:, ~neg_cols])
+        x_te_log = np.log(x_te[:, ~neg_cols])
 
     x_tr = build_poly(x_tr, degree)
     x_te = build_poly(x_te, degree)
 
-    x_tr = np.concatenate((x_tr, x_tr_cross, x_tr_log), axis=1)
-    x_te = np.concatenate((x_te, x_te_cross, x_te_log), axis=1)
+    if cross and log:
+        x_tr = np.concatenate((x_tr, x_tr_cross, x_tr_log), axis=1)
+        x_te = np.concatenate((x_te, x_te_cross, x_te_log), axis=1)
+    if cross and not log:
+        x_tr = np.concatenate((x_tr, x_tr_cross), axis=1)
+        x_te = np.concatenate((x_te, x_te_cross), axis=1)
+    if not cross and log:
+        x_tr = np.concatenate((x_tr, x_tr_log), axis=1)
+        x_te = np.concatenate((x_te, x_te_log), axis=1)
 
     x_tr, tr_mean, tr_sd = standardize_data(x_tr)
 

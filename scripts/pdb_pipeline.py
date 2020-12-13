@@ -22,7 +22,7 @@ import simtk.openmm as so
 from pdbfixer import PDBFixer
 
 from constants import wt_features_path, wt_pdb_path, \
-                    mut_features_path, mut_pdb_path
+    mut_features_path, mut_pdb_path
 from utilities import open_log
 
 # Number of interacting residues/particles considered
@@ -148,14 +148,7 @@ def listdir_no_hidden():
                 match the name of the keys in the `features` dictionnary.
     """
     Path(mut_features_path).mkdir(parents=True, exist_ok=True)
-    Path(mut_features_path+'U_LJ/').mkdir(parents=True, exist_ok=True)
-    Path(mut_features_path+'U_el/').mkdir(parents=True, exist_ok=True)
-    Path(mut_features_path+'D_mat/').mkdir(parents=True, exist_ok=True)
-
     Path(wt_features_path).mkdir(parents=True, exist_ok=True)
-    Path(wt_features_path+'U_LJ/').mkdir(parents=True, exist_ok=True)
-    Path(wt_features_path+'U_el/').mkdir(parents=True, exist_ok=True)
-    Path(wt_features_path+'D_mat/').mkdir(parents=True, exist_ok=True)
 
     for f in Path(wt_pdb_path).glob('[!.]*.pdb'):
         yield wt_pdb_path, wt_features_path, f.name
@@ -171,11 +164,11 @@ def pdb_parser(file):
 def pdb_clean_sim(args):
     """ Main function to be executed in parallel.
     """
-    orig_dir, sim_dir, fname = args
-    # print(orig_dir, sim_dir, fname)
-    if not Path(sim_dir + fname).exists():
+    input_dir, output_dir, fname = args
+    # print(input_dir, output_dir, fname)
+    if not Path(output_dir + fname).exists():
         # clean PDB
-        pdb = pmd.load_file(orig_dir + fname)
+        pdb = pmd.load_file(input_dir + fname)
         pdb.save('/tmp/' + fname, overwrite=True)
 
         fixer = PDBFixer(filename='/tmp/' + fname)
@@ -213,35 +206,41 @@ def pdb_clean_sim(args):
 
             print(f'done simulating: {fname}')
 
-            for feature in features:
-                # print('saving to: '+sim_dir + feature + '/' + basename + '.csv')
-                # print(feature, features[feature].shape)
-                # np.savetxt(sim_dir + feature + '/' + basename + '.csv', features[feature], delimiter=',')
-                np.save(sim_dir + feature + '/' +
-                        basename + '.npy', features[feature])
+            # stack 3 matrices into 1
+            combined_mat = np.stack(
+                (features["U_LJ"], features["U_el"], features["D_mat"]))
+
+            np.save(output_dir + '/' + basename + '.npy', combined_mat)
 
             print(f'saved features: {fname}')
 
         except Exception as e:
             print(f'could not simulate: {fname} Exception: {e}')
-            return 1
+            return 1, f'E;{fname};{e}'
 
-    return 0
+    return 0, f'S;{fname};'
 
 
 if __name__ == '__main__':
     log = open_log('pdb_pipeline')
 
+    log.write('# E: Error    S: Saved\n')
+    log.write('# status    name    exception\n')
+
     start_t = time()
     # no. of PDBs that could not be simulated
+    n_total = 0
     n_unsimulatables = 0
     p = mp.Pool(5)
-    for unsim in p.imap_unordered(pdb_clean_sim, listdir_no_hidden()):
+    for unsim, msg in p.imap_unordered(pdb_clean_sim, listdir_no_hidden()):
+        n_total += 1
         n_unsimulatables += unsim
+        log.write(msg+'\n')
     exec_t = time() - start_t
     print(f'finished in {exec_t}s could not simulate {n_unsimulatables} PDBs')
+    log.write(f'# parsed a total of {n_total} PDBs\n')
     log.write(
-        f'finished in {exec_t}s could not simulate {n_unsimulatables} PDBs\n')
+        f'# finished in {exec_t}s could not simulate {n_unsimulatables} PDBs\n')
 
     log.close()
 else:

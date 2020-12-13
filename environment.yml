@@ -24,3 +24,5 @@ dependencies:
   - notebook
   - pymol-bundle
   - parmed
+  - scikit-image
+  - tqdm
