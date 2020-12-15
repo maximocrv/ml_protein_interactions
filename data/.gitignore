@@ -1,13 +1,15 @@
+# ignore all
 *
 */*
 */.*/*
 .*
 .*/*
-SKEMPI2_PDBs.tar
-*.csv
+
+# unignore specific files
 !.gitignore
 !skempi_v2_cleaned.csv
+!extracted_features.csv
 !pdbs_wt/
 !pdbs_wt/*
-!pdbs_mutated/
-!pdbs_mutated/*
+!pdbs_mut/
+!pdbs_mut/*

@@ -1,10 +1,12 @@
 """This script contains utility functions used throughout the rest of the codebase."""
 
-import numpy as np
-import pandas as pd
-
 from pathlib import Path
 import time
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.stats import pearsonr
 
 from constants import mlp_features
 
@@ -152,6 +154,26 @@ def standardize_data(x):
     x[:, col_sd == 0] = x[:, col_sd == 0] - col_means[col_sd == 0]
 
     return x, col_means, col_sd
+
+
+def generate_scatter_plot(target, pred):
+    fig = plt.figure()
+    
+    plt.scatter(pred, target, s=10)
+    plt.plot(np.arange(np.min(pred), np.max(pred)), np.arange(np.min(pred), np.max(pred)), 'r')
+    
+    plt.title('Predicted $\Delta\Delta$G vs Target $\Delta \Delta$G')
+    plt.xlabel('Predicted $\Delta\Delta$G')
+    plt.ylabel('Target $\Delta \Delta$G')
+    
+    plt.set_xlim = (np.min(pred), np.max(pred)) 
+    plt.tight_layout()
+    
+    R = pearsonr(target, pred)[0]
+    rmse_te = np.sqrt(np.mean((pred - target) ** 2))
+    
+    plt.annotate(f"Pearson's R: {R:.4f}", (4, -5))
+    plt.annotate(f"Test RMSE: {rmse_te:.4f}", (4, -7))
 
 
 def load_data_features():

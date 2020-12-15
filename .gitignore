@@ -1,6 +1,11 @@
 # Created by https://www.gitignore.io/api/python,pycharm,visualstudiocode
 # Edit at https://www.gitignore.io/?templates=python,pycharm,visualstudiocode
 
+# TODO: just remove these folders!
+*_final/
+*_final/*
+*_final/**/*
+
 ### PyCharm ###
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm
 **/.ipynb_checkpoints/*

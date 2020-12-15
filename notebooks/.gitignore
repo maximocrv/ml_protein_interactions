@@ -1,0 +1,11 @@
+# ignore all
+*
+*/*
+**/*
+.*
+.*/*
+
+# unignore needed files
+!.gitignore
+!data_exploration.ipynb
+!model_exploration.ipynb

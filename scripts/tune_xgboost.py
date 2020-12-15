@@ -1,4 +1,5 @@
-"""Tunes binary classification XGBoost model using Bayesian Optimization."""
+"""Tunes XGBoost regression model using Bayesian Optimization."""
+
 import json
 import random
 from itertools import product
@@ -16,10 +17,12 @@ from sklearn.datasets import make_moons
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold, train_test_split
 
-from utilities import load_data
+from constants import mlp_features
+from utilities import load_data, open_log, clip_features_inplace, transform_data, generate_scatter_plot
 
 
 def train_model_bayes_opt(train_dmatrix: xgb.DMatrix, model_settings: dict) -> Tuple[xgb.XGBClassifier, dict]:
+    
     def model_function(max_depth: float, gamma: float, num_boost_round: float,
                        eta: float, subsample: float, max_delta_step: float,
                        alpha: float, reg_lambda: float) -> float:
@@ -40,7 +43,10 @@ def train_model_bayes_opt(train_dmatrix: xgb.DMatrix, model_settings: dict) -> T
         cv_result = xgb.cv(params, train_dmatrix, num_boost_round=int(num_boost_round), nfold=model_settings.n_fold,
                            early_stopping_rounds=model_settings.early_stopping_rounds)
         # note that BO maximizes the output of the function (so if loss is the output, return the negative loss)
-        return -1 * cv_result[f'test-{model_settings.eval_metric}-mean'].iloc[-1]
+        mean_rmse = cv_result[f'test-{model_settings.eval_metric}-mean'].iloc[-1]
+        sd_rmse = cv_result[f'test-{model_settings.eval_metric}-std'].iloc[-1]
+#         return -1 * (mean_rmse + 2 * sd_rmse)
+        return -1 * mean_rmse
 
     model_settings = munchify(model_settings)
 
@@ -68,20 +74,29 @@ def train_model_bayes_opt(train_dmatrix: xgb.DMatrix, model_settings: dict) -> T
     cv_result = xgb.cv(params, train_dmatrix, num_boost_round=int(params.num_boost_round),
                        nfold=model_settings.n_fold,
                        early_stopping_rounds=model_settings.early_stopping_rounds)
+    
+#     params.update({'best_ntree_limit': len(cv_result)})
 
-    params.update({'best_ntree_limit': len(cv_result)})
-
-    xgboost_model = xgb.train(params, train_dmatrix, num_boost_round=params.best_ntree_limit)
+    xgboost_model = xgb.train(params, train_dmatrix, num_boost_round=len(cv_result))
 
     return xgboost_model, params, cv_result
 
 
 if __name__ == "__main__":
     X, y = load_data()
+
+    # X[:, 8] = np.clip(X[:, 8], 1e8, 5e9) # u_lj_mut_mean
+    # X[:, 9] = np.clip(X[:, 9], 1e8, 5e10) # u_lj_mut_std
+
     x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=.2, random_state=42)
-    # still have to perform feature expansion
+
+    x_train, x_test = transform_data(x_train, x_test, degree=1, log=True, cross=True)
+    x_train, x_test = x_train.astype(np.float32), x_test.astype(np.float32)
+
+    print('x_train: ', x_train.shape, 'x_test: ', x_test.shape, '\n')
 
     d_train_mat = xgb.DMatrix(x_train, y_train)
+    d_test_mat = xgb.DMatrix(x_test, y_test)
 
     # parameter ranges for bayesian optimization
     bayes_dictionary = {
@@ -107,7 +122,7 @@ if __name__ == "__main__":
 
     model, paras, cv_result = train_model_bayes_opt(d_train_mat, bayes_dictionary)
 
-    #print('model: ', model, '\n', 'paras: ', paras, '\n ', 'cv_result: ', cv_result)
+    print('model: ', model, '\n', 'paras: ', paras, '\n ', 'cv_result: ', cv_result)
 
     # model = xgb.train(params, d_train_mat, evals=[(d_test_mat, "test")])
 

@@ -10,7 +10,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split, KFold
 
 from constants import test_metrics
-from train_helpers import train, gen_loaders
+from train_helpers import train, train_adaptive, gen_loaders
 from utilities import load_data, open_log, clip_features_inplace, transform_data
 
 import warnings
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     log = open_log('MLP')
 
     # print specific info about this run
-    log.write('####final train run\n')
+    log.write('####train run 10 layers 128 nodes early stopping\n')
 
     if not torch.cuda.is_available():
         print('WARNING: using CPU.')
@@ -101,42 +101,47 @@ if __name__ == "__main__":
     # to supress scipy's pearsonr related warnings
     warnings.simplefilter("ignore", PearsonRConstantInputWarning)
 
-    n_hidden_layers = [7]  # [7, 8] # [6, 8, 10, 12, 16] # [4, 8, 16]
-    # [56, 57, 58, 59, 60, 61, 62, 63, 64, 512] # [55, 60, 65] # [32, 64, 128, 256]
-    n_hidden_nodes = [60]
-    learning_rates = [1e-4]  # [1e-3, 1e-1]
-    # dropouts = [0.0, 0.01, 0.1, 0.2]
-    dropouts = [0.2]  # [0.01]  # [0.0]
-    # batchnorm = [False, True]
+    # hyperparameters
+    n_hidden_layers = [10]
+    n_hidden_nodes = [128]
+    learning_rates = [1e-3]
+    dropouts = [0.25]
     batchnorm = [False]
-    # L2 = [0.0, 0.001, 0.01, 0.1]
     L2 = [0.0]
     batch_size = 256
+    epochs = 200 # early stopping max consecutive epochs
     hyperparam_space = itertools.product(
         n_hidden_layers, n_hidden_nodes, learning_rates, dropouts, batchnorm, L2)
     kf = KFold(n_splits=5)
-    epochs = 150
+    
     opt_val_score = None
+    best_heuristic = lambda x, y: y['MSE'] < x['MSE']
 
     if train_only:
         opt_params = (n_hidden_layers[0], n_hidden_nodes[0],
                       learning_rates[0], dropouts[0], batchnorm[0], L2[0])
-        log.write('\nhidden layers: {}, nodes per layer: {}, learning rate: {}, dropout: {}, do batchnorm: {}, L2: {}\t'.format(
-            opt_params[0], opt_params[1], opt_params[2], opt_params[3], opt_params[4], opt_params[5]))
+        log.write('\thidden layers: {}, nodes per layer: {}, learning rate: {}, dropout: {}, do batchnorm: {}, L2: {}\n'
+                .format(opt_params[0], opt_params[1], opt_params[2], opt_params[3], opt_params[4], opt_params[5]))
 
     if not train_only:
+        # begin cross-validation
         start_t = time.time()
-
         for params in hyperparam_space:
             # K-fold cross validation
+            
+            # output
             print(
-                f'hidden layers: {params[0]}, nodes per layer: {params[1]}, learning rate: {params[2]}, dropout: {params[3]}, do batchnorm: {params[4]}, L2: {params[5]}')
+                'hidden layers: {}, nodes per layer: {}, learning rate: {}, dropout: {}, do batchnorm: {}, L2: {}'
+                .format(params[0], params[1], params[2], params[3], params[4], params[5]))
             log.write(
-                f'\nhidden layers: {params[0]}, nodes per layer: {params[1]}, learning rate: {params[2]}, dropout: {params[3]}, do batchnorm: {params[4]}, L2: {params[5]}\t')
+                '\thidden layers: {}, nodes per layer: {}, learning rate: {}, dropout: {}, do batchnorm: {}, L2: {}\n'
+                .format(params[0], params[1], params[2], params[3], params[4], params[5]))
+            
             train_losses_kf = []
             val_scores_kf = {key: [] for key in test_metrics}
             k = 0
             for train_index, val_index in kf.split(x_train):
+                # output
                 log.write(f'\tk_fold: {k}\n')
                 print(f'k_fold: {k}')
 
@@ -163,8 +168,9 @@ if __name__ == "__main__":
                 
                 # train fold
                 train_loss, val_scores = \
-                    train(model, criterion, dataset_kftrain, dataset_kfval,
-                          optimizer, epochs, device, test_metrics, log)
+                    train_adaptive(model, criterion, dataset_kftrain, dataset_kfval,
+                                   optimizer, device, test_metrics, log,
+                                   best_heuristic, epochs)
 
                 train_losses_kf.append(train_loss)
                 for key, fun in test_metrics.items():
@@ -201,16 +207,17 @@ if __name__ == "__main__":
                 opt_val_score = mean_val_scores['pearsonr']
                 opt_params = params
 
+        # output run time
         end_t = time.time()
         log.write(f'\tfinished cross-validation in {end_t-start_t}s.\n')
 
-    # output cross-validation results
-    if not train_only:
+        # output cross-validation results
         print(
             f'best hyperparams.:{str(opt_params)} with validation score={opt_val_score:12.5}')
         log.write(
             f'\tbest hyperparams.:{str(opt_params)} with validation score={opt_val_score:12.5}\n')
 
+    # Final training
     start_t = time.time()
 
     model = MLP(input_dim=x_train.shape[1], layers=opt_params[0],
@@ -224,10 +231,15 @@ if __name__ == "__main__":
     dataset_train = gen_loaders(x_train, y_train[:, None], batch_size)
     dataset_test = gen_loaders(x_test, y_test[:, None], batch_size)
 
-    train_loss, test_scores = \
-        train(model, criterion, dataset_train, dataset_test, optimizer,
-              epochs, device, test_metrics, log)
+    train_epochs = 400 # early stopping max consecutive epochs
 
+    # train final model
+    train_loss, test_scores = \
+        train_adaptive(model, criterion, dataset_train, dataset_test,
+                       optimizer, device, test_metrics, log,
+                       best_heuristic, train_epochs)
+
+    # output run time
     end_t = time.time()
     log.write(f'\tfinished final training in {end_t-start_t}s.\n')
 

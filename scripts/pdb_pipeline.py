@@ -28,17 +28,12 @@ from utilities import open_log
 # Number of interacting residues/particles considered
 # relevant to be stored in the features
 n_interactions = 256
-# max distance for two atoms to be considered 'interacting'. TODO: implement this
-inter_dist = 5 * su.angstrom
 
 
 def generate_features(ids0, ids1, forcefield, system, param):
-    """
+    """Performs a minimization of the energy and computes the matrix features.
     ids0: ids of the atoms for the 1st protein
     ids1: ids of the atoms for the 2nd protein
-
-    IMPORTANT! `features` should be a dictionnary whose keys are the same as
-                the name of the folders being created in the simulation output.
     """
     # sources
     # https://en.wikipedia.org/wiki/Electrostatics
@@ -89,14 +84,11 @@ def generate_features(ids0, ids1, forcefield, system, param):
     D = np.linalg.norm(np.expand_dims(
         xyz[ids0], 1) - np.expand_dims(xyz[ids1], 0), axis=2) * su.angstrom
 
-    # print(D.shape, ids1.shape, ids0.shape)
-
     # to choose the most relevant residues, we will first choose the pair of
     # atoms with the lowest distance, and then extract a submatrix around it.
     # This way we preserve the chain order of the distance matrix.
     min_i = np.argmin(D)
     min_r, min_c = int(min_i/D.shape[1]), min_i % D.shape[1]
-    # print(f'minimum distance: {np.min(D)}    position: {(min_r, min_c)}')
 
     ids0_min, ids0_max = min_r-n_interactions/2, min_r+n_interactions/2
     ids1_min, ids1_max = min_c-n_interactions/2, min_c+n_interactions/2
@@ -123,18 +115,10 @@ def generate_features(ids0, ids1, forcefield, system, param):
     Q = Q[np.ix_(ids0_interacting, ids1_interacting)]
     E = E[np.ix_(ids0_interacting, ids1_interacting)]
 
-    # print(D.shape, S.shape, Q.shape, E.shape)
-
     # compute nonbonded potential energies
     U_LJ = (4.0 * E * (np.power(S/D, 12) - np.power(S/D, 6))
             ).value_in_unit(su.kilojoule / su.mole)
     U_el = (k0 * Q / D).value_in_unit(su.kilojoule / su.mole)
-
-    # print(U_LJ.shape, U_el.shape)
-
-    # debug print
-    # print(f"U_LJ = {np.sum(U_LJ):.2f} kJ/mol; U_elec = {np.sum(U_el):.2f} kJ/mol")
-    # print(U_LJ.shape, U_el.shape, D.shape)
 
     features = {'U_LJ': U_LJ, 'U_el': U_el, 'D_mat': D}
     return features
@@ -144,8 +128,6 @@ def listdir_no_hidden():
     """Generates the PDB file names to be cleaned and simulated.
 
     Additionally, it creates the output directories if they are missing.
-    IMPORTANT! The name of the subfolders in the simulation output dir should
-                match the name of the keys in the `features` dictionnary.
     """
     Path(mut_features_path).mkdir(parents=True, exist_ok=True)
     Path(wt_features_path).mkdir(parents=True, exist_ok=True)
@@ -229,8 +211,8 @@ if __name__ == '__main__':
 
     start_t = time()
     # no. of PDBs that could not be simulated
-    n_total = 0
     n_unsimulatables = 0
+    n_total = 0
     p = mp.Pool(5)
     for unsim, msg in p.imap_unordered(pdb_clean_sim, listdir_no_hidden()):
         n_total += 1
