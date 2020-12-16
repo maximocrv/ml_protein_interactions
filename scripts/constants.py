@@ -25,6 +25,7 @@ R = (8.314/4184)
 
 
 def _test_metrics_pearsonr(y_real, y_pred):
+    ''' Takes in real and predicted y-values, returns the Pearson R score.'''
     R = pearsonr(y_real, y_pred)[0]
     return 0 if math.isnan(R) else R
 

@@ -1,3 +1,6 @@
+"""
+This script implements the HydraNet model.
+"""
 import math
 import multiprocessing as mp
 import os

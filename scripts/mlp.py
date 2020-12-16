@@ -1,4 +1,7 @@
 #!/bin/python
+"""
+This script implements the Multi-Layer Perceptron model.
+"""
 
 import itertools
 import numpy as np

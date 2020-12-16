@@ -1,5 +1,7 @@
 #!/bin/python
-
+"""
+This script cleans and generates the features required for the models using OpenMM for simulation.
+"""
 import os
 
 # check if we are in a conda virtual env
@@ -31,10 +33,18 @@ n_interactions = 256
 
 
 def generate_features(ids0, ids1, forcefield, system, param):
-    """Performs a minimization of the energy and computes the matrix features.
-    ids0: ids of the atoms for the 1st protein
-    ids1: ids of the atoms for the 2nd protein
-    """
+    '''
+    This function performs a minimization of the energy and computes the matrix features.
+    
+        Parameters:
+            ids0: ids of the atoms for the 1st protein
+            ids1: ids of the atoms for the 2nd protein
+            forcefield: forcefield for OpenMM simulation
+            system: system for OpenMM simulation
+            param: OpenMM parameters
+        Returns: features - to be used by ML models
+            
+    '''
     # sources
     # https://en.wikipedia.org/wiki/Electrostatics
     # https://en.wikipedia.org/wiki/Lennard-Jones_potential
@@ -125,10 +135,9 @@ def generate_features(ids0, ids1, forcefield, system, param):
 
 
 def listdir_no_hidden():
-    """Generates the PDB file names to be cleaned and simulated.
-
-    Additionally, it creates the output directories if they are missing.
-    """
+    '''
+    This function generates the PDB file names to be cleaned and simulated. Additionally, it creates the output directories if they are missing.
+    '''
     Path(mut_features_path).mkdir(parents=True, exist_ok=True)
     Path(wt_features_path).mkdir(parents=True, exist_ok=True)
 
@@ -140,12 +149,16 @@ def listdir_no_hidden():
 
 
 def pdb_parser(file):
+    '''
+    This function parses through a PDB file.
+    '''
     return [[char for char in subchain] for subchain in file.split('_')[1:3]]
 
 
 def pdb_clean_sim(args):
-    """ Main function to be executed in parallel.
-    """
+    '''
+    Top-level function to be executed in parallel to clean and generate features.
+    '''
     input_dir, output_dir, fname = args
     # print(input_dir, output_dir, fname)
     if not Path(output_dir + fname).exists():

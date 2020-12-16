@@ -1,4 +1,6 @@
-"""Tunes XGBoost regression model using Bayesian Optimization."""
+"""
+This script tunes XGBoost regression model using Bayesian Optimization.
+"""
 
 import json
 import random

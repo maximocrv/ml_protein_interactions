@@ -1,5 +1,7 @@
 #!/bin/python
-
+"""
+This script preprocesses the generated features to create a CSV file to be used by the MLP model.
+"""
 import os
 
 # check if we are in a conda virtual env
@@ -23,20 +25,22 @@ from utilities import open_log
 
 
 def get_mean_std(mat):
-    """Returns the overall mean of the matrix,
+    '''
+    This function returns the overall mean of the matrix,
     and the averaged STD of each row.
-    """
+    '''
     return np.mean(mat), np.mean(np.std(mat, axis=1))
 
 
 def preprocessing_mlp(pandas_row):
-    """Generates the features that will be used by the MLP
+    '''
+    This function generates the features that will be used by the MLP
     and XGboost given the SKEMPI v2 datapoint (the wild-type
     and mutant complexes).
 
     The feature matrices should have been generated beforehand
     using `pdb_pipeline.py`.
-    """
+    '''
     name_wt = pandas_row[1].iloc[0]
     name_mut = pandas_row[1].iloc[0] + '_' + \
         pandas_row[1].iloc[2].replace(',', '_')

@@ -1,5 +1,5 @@
 """
-This script contains the functions used for training in the different models
+This script contains the functions used for training in the different models.
 """
 
 import torch
@@ -9,7 +9,7 @@ from torch.utils.data import TensorDataset, DataLoader
 
 def train(_model, _criterion, dataset_train, dataset_test, _optimizer,
           n_epochs, device, test_metrics, log):
-    """
+    '''
     Trains the given model according to a certain criterion and logging
     the given test metrics.
 
@@ -44,7 +44,7 @@ def train(_model, _criterion, dataset_train, dataset_test, _optimizer,
         Final train loss
     eval_scores : dict
         Final test scores/losses
-    """
+    '''
     
     # output
     print("Starting training")
@@ -116,7 +116,7 @@ def train(_model, _criterion, dataset_train, dataset_test, _optimizer,
 
 def train_adaptive(_model, _criterion, dataset_train, dataset_test, _optimizer,
           device, test_metrics, log, best_heuristic=lambda x, y: True, n_epochs=10):
-    """
+    '''
     Trains the given model according to a certain criterion and logging
     the given test metrics. This training is done so that it stops only after
     `n_epochs` consecutive epochs that did not give a better score according
@@ -169,7 +169,7 @@ def train_adaptive(_model, _criterion, dataset_train, dataset_test, _optimizer,
         Best train loss accross all epochs.
     best_eval : dict
         Best evaluation scores/losses accross all epochs.
-    """
+    '''
     
     # Initial output
     print("Starting training")
@@ -267,7 +267,9 @@ def train_adaptive(_model, _criterion, dataset_train, dataset_test, _optimizer,
 
 
 def gen_loaders(x, y, batch_size):
-    """Generates the Batch loaders to use in the train loop."""
+    '''
+    Generates the Batch loaders to use in the train loop.
+    '''
     if type(x) == np.ndarray:
         x_tensor = torch.from_numpy(x)
     else:
