@@ -17,11 +17,28 @@ from constants import mlp_features
 from utilities import load_data, open_log, clip_features_inplace, transform_data, generate_scatter_plot
 
 
-def train_model_bayes_opt(train_dmatrix: xgb.DMatrix, model_settings: dict) -> Tuple[xgb.XGBClassifier, dict]:
-    
-    def model_function(max_depth: float, gamma: float, num_boost_round: float,
-                       eta: float, subsample: float, max_delta_step: float,
-                       alpha: float, reg_lambda: float) -> float:
+def train_model_bayes_opt(train_dmatrix, model_settings):
+    """
+    Trains the model using bayesian optimization.
+
+    :param train_dmatrix: Training matrix generated using the xgb.DMatrix data type.
+    :param model_settings: Dictionary ("munchified") containing all the relevant parameters, both the parameter ranges
+    to be explored and training ranges, as well as parameters for the Bayesian optimization itself regarding the number
+    of iterations to be performed.
+    :return: The final model, corresponding parameters, and the cross validation results.
+    """
+    def model_function(max_depth, gamma, num_boost_round, eta, subsample, max_delta_step, alpha, reg_lambda):
+        """
+        Blackbox function that is optimized via Bayesian Optimization. Defined inside 'train_model_bayes_opt' as we
+        require some entries from the model_settings that cannot be passed as arguments to this function, given that the
+        inputs can only be ranges over which we wish to optimize.
+
+        Pleaes refer to the documentation for explanations of each hyperparameter:
+        https://xgboost.readthedocs.io/en/latest/parameter.html
+
+        :return: Returns the approximate 95% confidence interval of the upper bound of the RMSE (but the negative value
+        thereof, as this library tries to maximize the objective).
+        """
         params = {
             'booster': 'gbtree',
             'max_depth': int(max_depth),
@@ -84,6 +101,7 @@ if __name__ == "__main__":
     except KeyError:
         print("\tPlease init the conda environment!\n")
         exit(1)
+
     X, y = load_data()
 
     x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=.2, random_state=42)
