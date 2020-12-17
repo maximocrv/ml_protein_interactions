@@ -84,7 +84,7 @@ def train(_model: torch.nn.Module, _criterion: torch.nn.MSELoss, dataset_train: 
         # Output epoch information
         eval_scores_str = \
             ' '.join([f'{k}={v:12.5g}' for k, v in eval_scores.items()])
-        print("Epoch {} | Train loss: {:12.5g} Test scores: {}".format(
+        print("Epoch {} | Train loss: {:12.5g} Validation scores: {}".format(
             epoch, train_loss, eval_scores_str))
         log.write("{}\t{:12.5g}\t{}\n".format(
             epoch, train_loss,
@@ -198,7 +198,7 @@ def train_adaptive(_model: torch.nn.Module, _criterion: torch.nn.MSELoss, datase
         if epoch % 5 == 0:
             eval_scores_str = \
                 ' '.join([f'{k}={v:12.5g}' for k, v in eval_scores.items()])
-            print("Epoch {} | Train loss: {:12.5g} Test scores: {}".format(
+            print("Epoch {} | Train loss: {:12.5g} Validation scores: {}".format(
                 epoch, train_loss, eval_scores_str))
         log.write("{}\t{:12.5g}\t{}\n".format(
             epoch, train_loss,
@@ -208,7 +208,7 @@ def train_adaptive(_model: torch.nn.Module, _criterion: torch.nn.MSELoss, datase
     # Output best scores
     eval_scores_str = \
         ' '.join([f'{k}={v:12.5g}' for k, v in best_eval.items()])
-    print("BEST - Epoch {} | Train loss: {:12.5g} Test scores: {}".format(
+    print("BEST - Epoch {} | Train loss: {:12.5g} Validation scores: {}".format(
         best_epoch, best_train, eval_scores_str))
     log.write("BEST - {}\t{:12.5g}\t{}\n".format(
         best_epoch, best_train,

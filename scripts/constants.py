@@ -32,7 +32,7 @@ def _test_metrics_pearsonr(y_real, y_pred):
 
     :param y_real: Actual target values.
     :param y_pred: Predicted target values.
-    :return: Pearson R score if the result is not nan.
+    :return: Pearson R score. If the result is nan, it returns 0.
     """
     R = pearsonr(y_real, y_pred)[0]
     return 0 if math.isnan(R) else R
