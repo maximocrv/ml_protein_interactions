@@ -97,17 +97,17 @@ class ProteinDataset(TensorDataset):
         n_rand = torch.rand(1)
 
         if self.augment_data:
-           # if 0 <= n_rand < 0.25:
-           #     wt_arr = torch.rot90(wt_arr, 1, (1, 2))
-           #     mut_arr = torch.rot90(mut_arr, 1, (1, 2))
+            if n_rand < 0.25:
+                wt_arr = torch.rot90(wt_arr, 1, (1, 2))
+                mut_arr = torch.rot90(mut_arr, 1, (1, 2))
 
-            if n_rand <= 0.5:
+            if 0.25 <= n_rand < 0.5:
                 wt_arr = torch.rot90(wt_arr, 2, (1, 2))
                 mut_arr = torch.rot90(mut_arr, 2, (1, 2))
 
-            #elif 0.5 <= n_rand < 0.75:
-            #    wt_arr = torch.rot90(wt_arr, 3, (1, 2))
-            #    mut_arr = torch.rot90(mut_arr, 3, (1, 2))
+            elif 0.5 <= n_rand < 0.75:
+                wt_arr = torch.rot90(wt_arr, 3, (1, 2))
+                mut_arr = torch.rot90(mut_arr, 3, (1, 2))
 
         self.tensors[0][index, 0] = wt_arr
         self.tensors[0][index, 1] = mut_arr
