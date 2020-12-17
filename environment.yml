@@ -11,7 +11,7 @@ dependencies:
   - autopep8
   - numpy==1.19.4
   - matplotlib==3.3.3
-  - pytorch==1.7.0
+  - pytorch
   - bayesian-optimization==1.1.0
   - xgboost==1.2.0
   - scikit-learn==0.23.2
@@ -19,11 +19,10 @@ dependencies:
     # - omnia/label/cuda91::openmm
   - openmm
   - pdbfixer
-  - mdtraj
   - jupyterlab
   - notebook
   - pymol-bundle
   - parmed
   - scikit-image
   - tqdm
-  - torchvision==0.8.1
+  - torchvision

@@ -366,7 +366,7 @@ if __name__ == "__main__":
         batch_rmse = np.sqrt(np.mean(np.square(preds - batch_y)))
         test_rmse.append(batch_rmse)
 
-        batch_pearson = pearsonr(preds.detach().numpy().squeeze(), batch_y.detach().numpy().squeeze())[0]
+        batch_pearson = pearsonr(preds, batch_y)[0]
         test_pearson.append(batch_pearson)
 
     R = pearsonr(y_te.squeeze(), np.concatenate(pred_te).squeeze())[0]
