@@ -4,7 +4,7 @@ The objective of this project is to reliably predict the relative binding affini
 
 ![protein_image](data/1a22_complex.jpeg "1A22 Complex")
 
-We are using the [SKEMPI v2.0](https://life.bsc.es/pid/skempi2/) dataset, which provides pairs of proteins in [PDB format](https://en.wikipedia.org/wiki/Protein_Data_Bank_(file_format)) (wild-types) and specifies the mutations that should be performed onto them, giving as well what the change binding affinity between the wild-type to the mutant.
+We are using the [SKEMPI v2.0](https://life.bsc.es/pid/skempi2/) dataset, which provides pairs of proteins in [PDB format](https://en.wikipedia.org/wiki/Protein_Data_Bank_(file_format)) (wild-types) and specifies the mutations that should be performed onto them, giving as well values to calculate the change in binding affinity between the wild-type and the mutant.
 
 ## File Structure
 
