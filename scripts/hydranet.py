@@ -152,38 +152,20 @@ class HydraNet(nn.Module):
         super().__init__()
         # feature map output: [(W - K + 2P) / S] + 1
         self.cnn1 = nn.Sequential(nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3, stride=2),
-                                  # output: (256-3)/2 + 1 =
                                   nn.ReLU(),
                                   nn.MaxPool2d(3, stride=2),
                                   nn.BatchNorm2d(8),
-                                  # nn.Dropout2d(p=0.2),
 
                                   nn.Conv2d(in_channels=8, out_channels=64, kernel_size=3, stride=2),
                                   nn.ReLU(),
                                   nn.MaxPool2d(3, stride=2),
                                   nn.BatchNorm2d(64),
-                                  # nn.Dropout2d(p=0.2),
-                                  # nn.AvgPool2d()
-
-                                  # nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3),
-                                  # nn.ReLU(),
-                                  # nn.MaxPool2d(2),
-                                  # nn.BatchNorm2d(64),
-                                  # nn.Dropout2d(p=0.15),
-                                  # nn.AvgPool2d()
-
+                                  
                                   nn.Conv2d(in_channels=64, out_channels=512, kernel_size=3),
                                   nn.ReLU(),
                                   nn.MaxPool2d(3, stride=2),
                                   nn.BatchNorm2d(512),
-                                  # nn.Dropout2d(p=0.2),
-
-                                  # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3),
-                                  # nn.ReLU(),
-                                  # nn.MaxPool2d(2),
-                                  # nn.BatchNorm2d(512),
-                                  # nn.Dropout2d(p=0.15),
-
+                                  
                                   nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=3, stride=2),
                                   nn.ReLU(),
                                   nn.MaxPool2d(2),
@@ -191,38 +173,20 @@ class HydraNet(nn.Module):
                                   )
 
         self.cnn2 = nn.Sequential(nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3, stride=2),
-                                  # output: (256-3)/2 + 1 =
                                   nn.ReLU(),
                                   nn.MaxPool2d(3, stride=2),
                                   nn.BatchNorm2d(8),
-                                  # nn.Dropout2d(p=0.2),
 
                                   nn.Conv2d(in_channels=8, out_channels=64, kernel_size=3, stride=2),
                                   nn.ReLU(),
                                   nn.MaxPool2d(3, stride=2),
                                   nn.BatchNorm2d(64),
-                                  # nn.Dropout2d(p=0.2),
-                                  # nn.AvgPool2d()
-
-                                  # nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3),
-                                  # nn.ReLU(),
-                                  # nn.MaxPool2d(2),
-                                  # nn.BatchNorm2d(64),
-                                  # nn.Dropout2d(p=0.15),
-                                  # nn.AvgPool2d()
-
+                                  
                                   nn.Conv2d(in_channels=64, out_channels=512, kernel_size=3),
                                   nn.ReLU(),
                                   nn.MaxPool2d(3, stride=2),
                                   nn.BatchNorm2d(512),
-                                  # nn.Dropout2d(p=0.2),
-
-                                  # nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3),
-                                  # nn.ReLU(),
-                                  # nn.MaxPool2d(2),
-                                  # nn.BatchNorm2d(512),
-                                  # nn.Dropout2d(p=0.15),
-
+                                  
                                   nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=3, stride=2),
                                   nn.ReLU(),
                                   nn.MaxPool2d(2),
@@ -230,31 +194,13 @@ class HydraNet(nn.Module):
                                   )
 
         # each output of self.cnn will have dimension x, so when concatenated we have 2 * x
-        self.fc = nn.Sequential(
-            # nn.Linear(2048, 512),
-            # nn.ReLU(),
-            # nn.Dropout(p=0.1),
-            nn.Linear(2 * 1024, 64),
-            nn.ReLU(),
-            nn.BatchNorm1d(64),
-            # nn.Dropout(p=0.1),
-            nn.Linear(64, 64),
-            nn.ReLU(),
-            nn.BatchNorm1d(64),
-            # nn.Dropout(p=0.1),
-            #nn.Linear(64, 64),
-            #nn.ReLU(),
-            #nn.BatchNorm1d(64),
-            # nn.Dropout(p=0.1),
-            #nn.Linear(64, 64),
-            #nn.ReLU(),
-            #nn.BatchNorm1d(64),
-            # nn.Dropout(p=0.1),
-            #nn.Linear(64, 64),
-            #nn.ReLU(),
-            #nn.BatchNorm1d(64),
-            # nn.Dropout(p=0.1),
-            nn.Linear(64, 1))
+        self.fc = nn.Sequential(nn.Linear(2 * 1024, 64),
+                                nn.ReLU(),
+                                nn.BatchNorm1d(64),
+                                nn.Linear(64, 64),
+                                nn.ReLU(),
+                                nn.BatchNorm1d(64),
+                                nn.Linear(64, 1))
 
     def forward(self, x1):
         """
@@ -341,40 +287,10 @@ if __name__ == "__main__":
     criterion = torch.nn.MSELoss()  # MSE loss for regression
     model_hydra = HydraNet().to(device)
     optimizer = torch.optim.AdamW(model_hydra.parameters(), lr=learning_rate, weight_decay=1e-3)
-    train_loss, eval_scores = train(model_hydra, criterion, train_data, val_data, optimizer, num_epochs, device,
+    train_loss, eval_scores = train(model_hydra, criterion, train_data, test_data, optimizer, num_epochs, device,
                                     test_metrics, log)
-
-#     model_hydra.eval().to("cpu")
-    model_hydra.eval()
 
     log.write(str(model_hydra.parameters))
     log.write(str(optimizer))
-
-    n = 0
-    test_rmse = []
-    test_pearson = []
-    pred_te = []
-    for batch_x, batch_y in test_data:
-        batch_x = batch_x.to(device)
-        preds = model_hydra(batch_x)
-        
-        preds = preds.cpu().detach().numpy().ravel()
-        batch_y = batch_y.detach().numpy().ravel()
-        
-        pred_te.append(preds)
-
-        batch_rmse = np.sqrt(np.mean(np.square(preds - batch_y)))
-        test_rmse.append(batch_rmse)
-
-        batch_pearson = pearsonr(preds, batch_y)[0]
-        test_pearson.append(batch_pearson)
-
-    R = pearsonr(y_te.squeeze(), np.concatenate(pred_te).squeeze())[0]
-    print(f'Pearson R test score: {R:.5}', '\n')
-    print(f'Test RMSE: {np.mean(test_rmse)}')
-
-    log.write(str(pred_te))
-    log.write(f"Test Pearson R: {R}")
-    log.write(f"Test RMSE: {np.mean(test_rmse)}")
 
     log.close()
