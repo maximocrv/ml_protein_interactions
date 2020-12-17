@@ -56,9 +56,6 @@ The following external libraries are used in this project:
 - [pymol-bundle](https://pymol.org/2/)
 - [parmed](https://github.com/ParmEd/ParmEd)
 - [munch](https://github.com/Infinidat/munch)
-- [flake8](https://pypi.org/project/flake8/)
-- [jedi](https://github.com/davidhalter/jedi)
-- [autopep8](https://pypi.org/project/autopep8/)
 
 
 ## Requirements
