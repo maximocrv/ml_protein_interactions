@@ -363,7 +363,7 @@ if __name__ == "__main__":
         
         pred_te.append(preds)
 
-        batch_rmse = torch.sqrt(torch.mean(torch.square(preds - batch_y))).item()
+        batch_rmse = np.sqrt(np.mean(np.square(preds - batch_y)))
         test_rmse.append(batch_rmse)
 
         batch_pearson = pearsonr(preds.detach().numpy().squeeze(), batch_y.detach().numpy().squeeze())[0]
