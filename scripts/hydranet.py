@@ -340,7 +340,7 @@ if __name__ == "__main__":
     # Train the logistic regression model with the Adam optimizer
     criterion = torch.nn.MSELoss()  # MSE loss for regression
     model_hydra = HydraNet().to(device)
-    optimizer = torch.optim.Adam(model_hydra.parameters(), lr=learning_rate)
+    optimizer = torch.optim.AdamW(model_hydra.parameters(), lr=learning_rate, weight_decay=1e-4)
     train_loss, eval_scores = train(model_hydra, criterion, train_data, val_data, optimizer, num_epochs, device,
                                     test_metrics, log)
 

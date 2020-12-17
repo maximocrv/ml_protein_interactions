@@ -59,7 +59,11 @@ def generate_features(ids0, ids1, forcefield, system, param):
 
     # setup MD engine
     integrator = so.LangevinIntegrator(300*su.kelvin, 1/su.picosecond, 0.002*su.picoseconds)
-    platform = so.Platform.getPlatformByName('CUDA')
+    try:
+        platform = so.Platform.getPlatformByName('CUDA')
+    except Exception e:
+        platform = so.Platform.getPlatformByName('CPU')
+
     simulation = so.app.Simulation(param.topology, system, integrator, platform)
 
     # set atom coordinates
@@ -216,16 +220,20 @@ if __name__ == '__main__':
     log.write('# E: Error    S: Saved\n')
     log.write('# status    name    exception\n')
 
-    start_t = time()
     # no. of PDBs that could not be simulated
     n_unsimulatables = 0
     n_total = 0
+    # start multiprocessing of the simulations
+    start_t = time()
     p = mp.Pool(5)
     for unsim, msg in p.imap_unordered(pdb_clean_sim, listdir_no_hidden()):
         n_total += 1
         n_unsimulatables += unsim
         log.write(msg + '\n')
+
+    # output
     exec_t = time() - start_t
+
     print(f'finished in {exec_t}s could not simulate {n_unsimulatables} PDBs')
     log.write(f'# parsed a total of {n_total} PDBs\n')
     log.write(
