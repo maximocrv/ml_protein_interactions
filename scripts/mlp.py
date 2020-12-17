@@ -22,6 +22,16 @@ train_only = False
 
 class MLP(torch.nn.Module):
     def __init__(self, input_dim, layers, nodes, dropout=0.0, do_batchnorm=False, output_dim=1):
+        """
+        Initializes MLP class.
+
+        :param input_dim: Dimension of the inputs.
+        :param layers: Number of hidden layers.
+        :param nodes: Number of nodes per layer.
+        :param dropout: Dropout conditions for each layer.
+        :param do_batchnorm:
+        :param output_dim:
+        """
         super().__init__()
         self.input = nn.Linear(input_dim, nodes)
         self.hidden = nn.ModuleList()
@@ -69,12 +79,10 @@ if __name__ == "__main__":
     X[:, 8] = np.clip(X[:, 8], 1e8, 5e9)  # u_lj_mut_mean
     X[:, 9] = np.clip(X[:, 9], 1e8, 5e10)  # u_lj_mut_std
 
-    x_train, x_test, y_train, y_test = train_test_split(
-        X, y, test_size=.2, random_state=42)
+    x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=.2, random_state=42)
 
     # standardize data
-    x_train, x_test = transform_data(
-        x_train, x_test, degree=1, log=False, cross=False)
+    x_train, x_test = transform_data(x_train, x_test, degree=1, log=False, cross=False)
     x_train, x_test = x_train.astype(np.float32), x_test.astype(np.float32)
 
     x_train = torch.from_numpy(x_train)
@@ -175,8 +183,7 @@ if __name__ == "__main__":
 
             # average validation scores and training losses
             mean_train_loss = np.mean(train_losses_kf)
-            mean_val_scores = {key:
-                                   np.mean(val_scores_kf[key]) for key in test_metrics}
+            mean_val_scores = {key: np.mean(val_scores_kf[key]) for key in test_metrics}
 
             # output
             val_scores_str = ' '.join([f'{k}={v:12.5g}' for k, v in mean_val_scores.items()])

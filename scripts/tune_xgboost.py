@@ -33,7 +33,7 @@ def train_model_bayes_opt(train_dmatrix, model_settings):
         require some entries from the model_settings that cannot be passed as arguments to this function, given that the
         inputs can only be ranges over which we wish to optimize.
 
-        Pleaes refer to the documentation for explanations of each hyperparameter:
+        Please refer to the documentation for explanations of each hyperparameter:
         https://xgboost.readthedocs.io/en/latest/parameter.html
 
         :return: Returns the approximate 95% confidence interval of the upper bound of the RMSE (but the negative value

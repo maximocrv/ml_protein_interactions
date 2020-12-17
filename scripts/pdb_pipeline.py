@@ -49,22 +49,18 @@ def generate_features(ids0, ids1, forcefield, system, param):
     charge = np.array([a.charge for a in param.atoms])
 
     # pairwise epsilon with units
-    E = np.sqrt(epsilon[ids0].reshape(-1, 1) *
-                epsilon[ids1].reshape(1, -1)) * param.atoms[0].uepsilon.unit
+    E = np.sqrt(epsilon[ids0].reshape(-1, 1) * epsilon[ids1].reshape(1, -1)) * param.atoms[0].uepsilon.unit
 
     # pairwise sigma with units
-    S = 0.5*(sigma[ids0].reshape(-1, 1) +
-             sigma[ids1].reshape(1, -1)) * param.atoms[0].usigma.unit
+    S = 0.5 * (sigma[ids0].reshape(-1, 1) + sigma[ids1].reshape(1, -1)) * param.atoms[0].usigma.unit
 
     # pairwise partial charges
     Q = charge[ids0].reshape(-1, 1) * charge[ids1].reshape(1, -1)
 
     # setup MD engine
-    integrator = so.LangevinIntegrator(
-        300*su.kelvin, 1/su.picosecond, 0.002*su.picoseconds)
+    integrator = so.LangevinIntegrator(300*su.kelvin, 1/su.picosecond, 0.002*su.picoseconds)
     platform = so.Platform.getPlatformByName('CUDA')
-    simulation = so.app.Simulation(
-        param.topology, system, integrator, platform)
+    simulation = so.app.Simulation(param.topology, system, integrator, platform)
 
     # set atom coordinates
     simulation.context.setPositions(param.get_coordinates()[0] * su.angstrom)
@@ -112,11 +108,11 @@ def generate_features(ids0, ids1, forcefield, system, param):
     E = E[np.ix_(ids0_interacting, ids1_interacting)]
 
     # compute nonbonded potential energies
-    U_LJ = (4.0 * E * (np.power(S/D, 12) - np.power(S/D, 6))
-            ).value_in_unit(su.kilojoule / su.mole)
+    U_LJ = (4.0 * E * (np.power(S/D, 12) - np.power(S/D, 6))).value_in_unit(su.kilojoule / su.mole)
     U_el = (k0 * Q / D).value_in_unit(su.kilojoule / su.mole)
 
     features = {'U_LJ': U_LJ, 'U_el': U_el, 'D_mat': D}
+
     return features
 
 
