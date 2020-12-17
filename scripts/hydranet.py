@@ -97,17 +97,17 @@ class ProteinDataset(TensorDataset):
         n_rand = torch.rand(1)
 
         if self.augment_data:
-            if 0 <= n_rand < 0.25:
-                wt_arr = torch.rot90(wt_arr, 1, (1, 2))
-                mut_arr = torch.rot90(mut_arr, 1, (1, 2))
+           # if 0 <= n_rand < 0.25:
+           #     wt_arr = torch.rot90(wt_arr, 1, (1, 2))
+           #     mut_arr = torch.rot90(mut_arr, 1, (1, 2))
 
-            elif 0.25 <= n_rand < 0.25:
+            if n_rand <= 0.5:
                 wt_arr = torch.rot90(wt_arr, 2, (1, 2))
                 mut_arr = torch.rot90(mut_arr, 2, (1, 2))
 
-            elif 0.5 <= n_rand < 0.75:
-                wt_arr = torch.rot90(wt_arr, 3, (1, 2))
-                mut_arr = torch.rot90(mut_arr, 3, (1, 2))
+            #elif 0.5 <= n_rand < 0.75:
+            #    wt_arr = torch.rot90(wt_arr, 3, (1, 2))
+            #    mut_arr = torch.rot90(mut_arr, 3, (1, 2))
 
         self.tensors[0][index, 0] = wt_arr
         self.tensors[0][index, 1] = mut_arr
@@ -146,7 +146,7 @@ def gen_hydra_loaders(x, y, means, stds, batch_size, augment_data=False, mode=No
 class HydraNet(nn.Module):
     def __init__(self):
         """
-        Initializes HydraNet instance, which is a double headed convolutional network which is then concatenated and fed
+        Initializes HydraNet model, which is a double headed convolutional network which is then concatenated and fed
         through to a fully connected network. The architecture is described below.
         """
         super().__init__()
@@ -322,7 +322,7 @@ if __name__ == "__main__":
     stds_mut = x_tr[:, 1].std(axis=(2, 3), keepdims=True).mean(axis=0, keepdims=True)
     stds = np.vstack([stds_wt, stds_mut])
 
-    train_data = gen_hydra_loaders(x_tr, y_tr, means, stds, batch_size=16, augment_data=False, mode='train')
+    train_data = gen_hydra_loaders(x_tr, y_tr, means, stds, batch_size=16, augment_data=True, mode='train')
     val_data = gen_hydra_loaders(x_val, y_val, means, stds, batch_size=16, augment_data=False, mode=None)
     test_data = gen_hydra_loaders(x_te, y_te, means, stds, batch_size=16, augment_data=False, mode=None)
 

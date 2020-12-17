@@ -7,7 +7,7 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader
 
 
-def train(_model: torch.nn.Module, _criterion: torch.nn.Loss, dataset_train: DataLoader, dataset_test: DataLoader,
+def train(_model: torch.nn.Module, _criterion: torch.nn.MSELoss, dataset_train: DataLoader, dataset_test: DataLoader,
           _optimizer: torch.optim.Optimizer, n_epochs: int, device: torch.device, test_metrics: dict, log):
     """
     Trains the given model according to a certain criterion and logging
@@ -94,7 +94,7 @@ def train(_model: torch.nn.Module, _criterion: torch.nn.Loss, dataset_train: Dat
     return train_loss, eval_scores
 
 
-def train_adaptive(_model: torch.nn.Module, _criterion: torch.nn.Loss, dataset_train: DataLoader,
+def train_adaptive(_model: torch.nn.Module, _criterion: torch.nn.MSELoss, dataset_train: DataLoader,
                    dataset_test: DataLoader, _optimizer: torch.optim.Optimizer, device: torch.device,
                    test_metrics: dict, log, best_heuristic=lambda x, y: True, n_epochs: int = 10):
     """

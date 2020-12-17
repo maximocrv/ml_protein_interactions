@@ -1,4 +1,4 @@
-# Protein-Protein Interactions: ml_protein_protein
+# Protein-Protein Interactions
 
 The objective of this project is to reliably predict the relative binding affinity arising due to mutations in protein structures, which is an active field of research in protein engineering.
 

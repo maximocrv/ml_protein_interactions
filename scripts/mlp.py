@@ -17,6 +17,7 @@ from sklearn.model_selection import train_test_split, KFold
 from train_helpers import train_adaptive, gen_loaders
 from utilities import load_data, open_log, transform_data
 
+# Whether to only train the model instead of performing cross-validation.
 train_only = False
 
 
@@ -29,8 +30,8 @@ class MLP(torch.nn.Module):
         :param layers: Number of hidden layers.
         :param nodes: Number of nodes per layer.
         :param dropout: Dropout conditions for each layer.
-        :param do_batchnorm:
-        :param output_dim:
+        :param do_batchnorm: Whether to perform batch normalization in each hidden layer.
+        :param output_dim: Dimension of the output. Should always be 1.
         """
         super().__init__()
         self.input = nn.Linear(input_dim, nodes)
@@ -48,6 +49,11 @@ class MLP(torch.nn.Module):
         self.relu = torch.nn.ReLU()
 
     def forward(self, x):
+        """
+        Forward pass. Performs batchnorm if specified in the initialization.
+
+        :param x: Input of the previously specified `input_dim`.
+        """
         x = self.input(x)
         x = self.relu(x)
 
@@ -65,7 +71,7 @@ if __name__ == "__main__":
     log = open_log('MLP')
 
     # print specific info about this run
-    log.write('####train run 10 layers 128 nodes early stopping\n')
+    log.write('####train run 8 layers 128 nodes early stopping\n')
 
     if not torch.cuda.is_available():
         print('WARNING: using CPU.')
@@ -112,7 +118,7 @@ if __name__ == "__main__":
     warnings.simplefilter("ignore", PearsonRConstantInputWarning)
 
     # Defining hyperparameters
-    n_hidden_layers = [10]
+    n_hidden_layers = [8]
     n_hidden_nodes = [128]
     learning_rates = [1e-3]
     dropouts = [0.25]
