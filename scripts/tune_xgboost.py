@@ -2,9 +2,7 @@
 This script tunes XGBoost regression model using Bayesian Optimization.
 """
 
-import json
-import random
-from itertools import product
+import os
 from typing import Union, Tuple, Dict
 
 import numpy as np
@@ -13,11 +11,7 @@ import xgboost as xgb
 from munch import munchify
 from scipy.stats import pearsonr
 from bayes_opt import BayesianOptimization
-from sklearn.metrics import accuracy_score
-from sklearn.multiclass import OneVsRestClassifier
-from sklearn.datasets import make_moons
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold, train_test_split
+from sklearn.model_selection import  train_test_split
 
 from constants import mlp_features
 from utilities import load_data, open_log, clip_features_inplace, transform_data, generate_scatter_plot
@@ -44,11 +38,12 @@ def train_model_bayes_opt(train_dmatrix: xgb.DMatrix, model_settings: dict) -> T
 
         cv_result = xgb.cv(params, train_dmatrix, num_boost_round=int(num_boost_round), nfold=model_settings.n_fold,
                            early_stopping_rounds=model_settings.early_stopping_rounds)
-        # note that BO maximizes the output of the function (so if loss is the output, return the negative loss)
+
+        # We return the negative value of confidence interval for RMSE as the Bayesian Optimization library attempts to
+        # maximize the objective
         mean_rmse = cv_result[f'test-{model_settings.eval_metric}-mean'].iloc[-1]
         sd_rmse = cv_result[f'test-{model_settings.eval_metric}-std'].iloc[-1]
-#         return -1 * (mean_rmse + 2 * sd_rmse)
-        return -1 * mean_rmse
+        return -1 * (mean_rmse + 2 * sd_rmse)
 
     model_settings = munchify(model_settings)
 
@@ -76,8 +71,6 @@ def train_model_bayes_opt(train_dmatrix: xgb.DMatrix, model_settings: dict) -> T
     cv_result = xgb.cv(params, train_dmatrix, num_boost_round=int(params.num_boost_round),
                        nfold=model_settings.n_fold,
                        early_stopping_rounds=model_settings.early_stopping_rounds)
-    
-#     params.update({'best_ntree_limit': len(cv_result)})
 
     xgboost_model = xgb.train(params, train_dmatrix, num_boost_round=len(cv_result))
 
@@ -85,10 +78,13 @@ def train_model_bayes_opt(train_dmatrix: xgb.DMatrix, model_settings: dict) -> T
 
 
 if __name__ == "__main__":
+    # check if we are in a conda virtual env
+    try:
+        os.environ["CONDA_DEFAULT_ENV"]
+    except KeyError:
+        print("\tPlease init the conda environment!\n")
+        exit(1)
     X, y = load_data()
-
-    # X[:, 8] = np.clip(X[:, 8], 1e8, 5e9) # u_lj_mut_mean
-    # X[:, 9] = np.clip(X[:, 9], 1e8, 5e10) # u_lj_mut_std
 
     x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=.2, random_state=42)
 
@@ -118,15 +114,13 @@ if __name__ == "__main__":
         'objective': 'reg:squarederror',
         'eval_metric': 'rmse',
         # the following two params are parameters for bayesian optimization, not for actual xgboost
-        'n_bayesian_optimization_iterations': 20,
-        'n_init_points_bayesian_optimization': 6
+        'n_bayesian_optimization_iterations': 400,
+        'n_init_points_bayesian_optimization': 40
     }
 
     model, paras, cv_result = train_model_bayes_opt(d_train_mat, bayes_dictionary)
 
     print('model: ', model, '\n', 'paras: ', paras, '\n ', 'cv_result: ', cv_result)
-
-    # model = xgb.train(params, d_train_mat, evals=[(d_test_mat, "test")])
 
     d_test_mat = xgb.DMatrix(x_test, y_test)
     model.eval(d_test_mat)

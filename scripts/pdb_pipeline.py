@@ -3,48 +3,32 @@
 This script cleans and generates the features required for the models using OpenMM for simulation.
 """
 import os
-
-# check if we are in a conda virtual env
-try:
-    os.environ["CONDA_DEFAULT_ENV"]
-except KeyError:
-    print("\tPlease init the conda environment!\n")
-    exit(1)
-
 from pathlib import Path
 from time import time
 import multiprocessing as mp
 
 import numpy as np
-# import pandas as pd
-
 import parmed as pmd
 import simtk.unit as su
 import simtk.openmm as so
 from pdbfixer import PDBFixer
 
-from constants import wt_features_path, wt_pdb_path, \
-    mut_features_path, mut_pdb_path
 from utilities import open_log
-
-# Number of interacting residues/particles considered
-# relevant to be stored in the features
-n_interactions = 256
+from constants import wt_features_path, wt_pdb_path, mut_features_path, mut_pdb_path
 
 
 def generate_features(ids0, ids1, forcefield, system, param):
-    '''
+    """
     This function performs a minimization of the energy and computes the matrix features.
-    
-        Parameters:
-            ids0: ids of the atoms for the 1st protein
-            ids1: ids of the atoms for the 2nd protein
-            forcefield: forcefield for OpenMM simulation
-            system: system for OpenMM simulation
-            param: OpenMM parameters
-        Returns: features - to be used by ML models
-            
-    '''
+
+    :param ids0: ids of the atoms for the 1st protein
+    :param ids1: ids of the atoms for the 2nd protein
+    :param forcefield: forcefield for OpenMM simulation
+    :param system: system for OpenMM simulation
+    :param param: OpenMM parameters
+    :return: features - to be used by ML models
+    """
+
     # sources
     # https://en.wikipedia.org/wiki/Electrostatics
     # https://en.wikipedia.org/wiki/Lennard-Jones_potential
@@ -94,14 +78,16 @@ def generate_features(ids0, ids1, forcefield, system, param):
     D = np.linalg.norm(np.expand_dims(
         xyz[ids0], 1) - np.expand_dims(xyz[ids1], 0), axis=2) * su.angstrom
 
-    # to choose the most relevant residues, we will first choose the pair of
-    # atoms with the lowest distance, and then extract a submatrix around it.
-    # This way we preserve the chain order of the distance matrix.
+    # To choose the most relevant residues, we will first choose the pair of atoms with the lowest distance, and then
+    # extract a submatrix around it. This way we preserve the chain order of the distance matrix.
     min_i = np.argmin(D)
     min_r, min_c = int(min_i/D.shape[1]), min_i % D.shape[1]
 
-    ids0_min, ids0_max = min_r-n_interactions/2, min_r+n_interactions/2
-    ids1_min, ids1_max = min_c-n_interactions/2, min_c+n_interactions/2
+    # Number of interacting residues/particles considered relevant to be stored in the features
+    n_interactions = 256
+
+    ids0_min, ids0_max = min_r - n_interactions/2, min_r + n_interactions/2
+    ids1_min, ids1_max = min_c - n_interactions/2, min_c + n_interactions/2
 
     if ids0_min < 0:
         ids0_max -= ids0_min
@@ -135,9 +121,12 @@ def generate_features(ids0, ids1, forcefield, system, param):
 
 
 def listdir_no_hidden():
-    '''
-    This function generates the PDB file names to be cleaned and simulated. Additionally, it creates the output directories if they are missing.
-    '''
+    """
+    This function generates the PDB file names to be cleaned and simulated. Additionally, it creates the output
+    directories if they are missing.
+
+    :return: Iterator yielding file paths and pdb names
+    """
     Path(mut_features_path).mkdir(parents=True, exist_ok=True)
     Path(wt_features_path).mkdir(parents=True, exist_ok=True)
 
@@ -149,16 +138,22 @@ def listdir_no_hidden():
 
 
 def pdb_parser(file):
-    '''
+    """
     This function parses through a PDB file.
-    '''
+
+    :param file: Input file pertaining to pdb
+    :return: Parsed key words from file name
+    """
     return [[char for char in subchain] for subchain in file.split('_')[1:3]]
 
 
 def pdb_clean_sim(args):
-    '''
+    """
     Top-level function to be executed in parallel to clean and generate features.
-    '''
+
+    :param args: Input and output directories, pdb name.
+    :return:
+    """
     input_dir, output_dir, fname = args
     # print(input_dir, output_dir, fname)
     if not Path(output_dir + fname).exists():
@@ -181,12 +176,9 @@ def pdb_clean_sim(args):
 
         # Run simulation
         try:
-            forcefield = so.app.ForceField(
-                'amber14-all.xml', 'amber14/tip3pfb.xml')
-            system = forcefield.createSystem(
-                fixer.topology, nonbondedMethod=so.app.NoCutoff)
-            param = pmd.openmm.load_topology(
-                fixer.topology, system=system, xyz=fixer.positions)
+            forcefield = so.app.ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
+            system = forcefield.createSystem(fixer.topology, nonbondedMethod=so.app.NoCutoff)
+            param = pmd.openmm.load_topology(fixer.topology, system=system, xyz=fixer.positions)
 
             basename = '.'.join(fname.split('.')[:-1])
 
@@ -202,8 +194,7 @@ def pdb_clean_sim(args):
             print(f'done simulating: {fname}')
 
             # stack 3 matrices into 1
-            combined_mat = np.stack(
-                (features["U_LJ"], features["U_el"], features["D_mat"]))
+            combined_mat = np.stack((features["U_LJ"], features["U_el"], features["D_mat"]))
 
             np.save(output_dir + '/' + basename + '.npy', combined_mat)
 
@@ -217,6 +208,13 @@ def pdb_clean_sim(args):
 
 
 if __name__ == '__main__':
+    # check if we are in a conda virtual env
+    try:
+        os.environ["CONDA_DEFAULT_ENV"]
+    except KeyError:
+        print("\tPlease init the conda environment!\n")
+        exit(1)
+
     log = open_log('pdb_pipeline')
 
     log.write('# E: Error    S: Saved\n')
@@ -230,7 +228,7 @@ if __name__ == '__main__':
     for unsim, msg in p.imap_unordered(pdb_clean_sim, listdir_no_hidden()):
         n_total += 1
         n_unsimulatables += unsim
-        log.write(msg+'\n')
+        log.write(msg + '\n')
     exec_t = time() - start_t
     print(f'finished in {exec_t}s could not simulate {n_unsimulatables} PDBs')
     log.write(f'# parsed a total of {n_total} PDBs\n')

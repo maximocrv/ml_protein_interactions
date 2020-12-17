@@ -1,16 +1,8 @@
 #!/bin/python
 """
-This script preprocesses the generated features to create a CSV file to be used by the MLP model.
+This script preprocesses the generated features to create a CSV file to be used by the MLP and XGBoost models.
 """
 import os
-
-# check if we are in a conda virtual env
-try:
-    os.environ["CONDA_DEFAULT_ENV"]
-except KeyError:
-    print("\tPlease init the conda environment!\n")
-    exit(1)
-
 import re
 import math
 from pathlib import Path
@@ -19,28 +11,23 @@ import multiprocessing as mp
 import numpy as np
 import pandas as pd
 
-from constants import skempi_csv, wt_features_path, mut_features_path, \
-    mlp_features, R
+from constants import skempi_csv, wt_features_path, mut_features_path, mlp_features, R
 from utilities import open_log
 
 
-def get_mean_std(mat):
-    '''
-    This function returns the overall mean of the matrix,
-    and the averaged STD of each row.
-    '''
-    return np.mean(mat), np.mean(np.std(mat, axis=1))
+def preprocessing(pandas_row):
+    """
+    This function generates the features that will be used by the MLP and XGboost given the SKEMPI v2 datapoint (the
+    wild-type and mutant complexes).
 
+    The feature matrices should have been generated beforehand using `pdb_pipeline.py`.
 
-def preprocessing_mlp(pandas_row):
-    '''
-    This function generates the features that will be used by the MLP
-    and XGboost given the SKEMPI v2 datapoint (the wild-type
-    and mutant complexes).
-
-    The feature matrices should have been generated beforehand
-    using `pdb_pipeline.py`.
-    '''
+    :param pandas_row: Row of the pandas dataframe which contains all relevant information in order to load specific
+    mutants and wild types.
+    :return: Dictionary containing means and standard deviations of all channels of both the mutants and the wild types,
+    temperature, and the corresponding DDG. Also contains the name of the mutation which by default has the wild type
+    name stored within it.
+    """
     name_wt = pandas_row[1].iloc[0]
     name_mut = pandas_row[1].iloc[0] + '_' + \
         pandas_row[1].iloc[2].replace(',', '_')
@@ -83,17 +70,35 @@ def preprocessing_mlp(pandas_row):
     # debug print
     print(f'parsed {name_mut}')
 
-    return {"mut": name_mut, "d_mat_wt_mean": d_mat_wt_mean,
-            "d_mat_wt_std": d_mat_wt_std, "u_lj_wt_mean": u_lj_wt_mean,
-            "u_lj_wt_std": u_lj_wt_std, "u_el_wt_mean": u_el_wt_mean,
-            "u_el_wt_std": u_el_wt_std, "d_mat_mut_mean": d_mat_mut_mean,
-            "d_mat_mut_std": d_mat_mut_std, "u_lj_mut_mean": u_lj_mut_mean,
-            "u_lj_mut_std": u_lj_mut_std, "u_el_mut_mean": u_el_mut_mean,
-            "u_el_mut_std": u_el_mut_std, "temp": temp,
-            "DDG": DDG}
+    return {"mut": name_mut,
+            "d_mat_wt_mean": d_mat_wt_mean, "d_mat_wt_std": d_mat_wt_std,
+            "u_lj_wt_mean": u_lj_wt_mean, "u_lj_wt_std": u_lj_wt_std,
+            "u_el_wt_mean": u_el_wt_mean, "u_el_wt_std": u_el_wt_std,
+            "d_mat_mut_mean": d_mat_mut_mean, "d_mat_mut_std": d_mat_mut_std,
+            "u_lj_mut_mean": u_lj_mut_mean, "u_lj_mut_std": u_lj_mut_std,
+            "u_el_mut_mean": u_el_mut_mean, "u_el_mut_std": u_el_mut_std,
+            "temp": temp, "DDG": DDG}
+
+
+def get_mean_std(mat):
+    """
+    This function returns the overall mean of the matrix,
+    and the averaged STD of each row.
+
+    :param mat: Input matrix
+    :return: Overall mean and average standard deviation of each row
+    """
+    return np.mean(mat), np.mean(np.std(mat, axis=1))
 
 
 if __name__ == '__main__':
+    # check if we are in a conda virtual env
+    try:
+        os.environ["CONDA_DEFAULT_ENV"]
+    except KeyError:
+        print("\tPlease init the conda environment!\n")
+        exit(1)
+
     log = open_log('preprocessing_mlp')
 
     df = pd.read_csv(skempi_csv, sep=';')
@@ -116,8 +121,10 @@ if __name__ == '__main__':
         "d_mat_mut_mean", "d_mat_mut_std", "u_lj_mut_mean",  "u_lj_mut_std",
         "u_el_mut_mean",  "u_el_mut_std", "temp", "DDG"
     ])
+
     n_non_existant = 0
-    for data in mp.Pool(5).imap_unordered(preprocessing_mlp, df.iterrows()):
+
+    for data in mp.Pool(5).imap_unordered(preprocessing, df.iterrows()):
         if data is None:
             n_non_existant += 1
         else:
@@ -125,6 +132,7 @@ if __name__ == '__main__':
 
     print(f'{n_non_existant} PDBs do not have features.')
     print(str(df_out.head()))
+
     df_out.to_csv(mlp_features)
 
     log.write(f'\t{n_non_existant} PDBs do not have features.\n')

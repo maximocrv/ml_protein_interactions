@@ -9,12 +9,12 @@ dependencies:
   - flake8
   - jedi
   - autopep8
-  - numpy
-  - matplotlib
-  - pytorch
-  - bayesian-optimization
-  - xgboost
-  - scikit-learn
+  - numpy==1.19.4
+  - matplotlib==3.3.3
+  - pytorch==1.7.0
+  - bayesian-optimization==1.1.0
+  - xgboost==1.2.0
+  - scikit-learn==0.23.2
   - munch
     # - omnia/label/cuda91::openmm
   - openmm
