@@ -195,13 +195,13 @@ class HydraNet(nn.Module):
                                   # output: (256-3)/2 + 1 =
                                   nn.ReLU(),
                                   nn.MaxPool2d(3, stride=2),
-#                                   nn.BatchNorm2d(8),
+                                  nn.BatchNorm2d(8),
 #                                   nn.Dropout2d(p=0.2),
 
                                   nn.Conv2d(in_channels=8, out_channels=64, kernel_size=3, stride=2),
                                   nn.ReLU(),
                                   nn.MaxPool2d(3, stride=2),
-#                                   nn.BatchNorm2d(64),
+                                  nn.BatchNorm2d(64),
 #                                   nn.Dropout2d(p=0.2),
                                   #nn.AvgPool2d()
 
@@ -215,7 +215,7 @@ class HydraNet(nn.Module):
                                   nn.Conv2d(in_channels=64, out_channels=256, kernel_size=3),
                                   nn.ReLU(),
                                   nn.MaxPool2d(3, stride=2),
-#                                   nn.BatchNorm2d(512),
+                                  nn.BatchNorm2d(256),
 #                                   nn.Dropout2d(p=0.2),
 
                                   #nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3),
@@ -227,7 +227,7 @@ class HydraNet(nn.Module):
                                   nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=2),
                                   nn.ReLU(),
                                   nn.MaxPool2d(2),
-#                                   nn.BatchNorm2d(1024)
+                                  nn.BatchNorm2d(512)
                                   )
 
 
@@ -238,13 +238,13 @@ class HydraNet(nn.Module):
                                   # output: (256-3)/2 + 1 =
                                   nn.ReLU(),
                                   nn.MaxPool2d(3, stride=2),
-#                                   nn.BatchNorm2d(8),
+                                  nn.BatchNorm2d(8),
 #                                   nn.Dropout2d(p=0.2),
 
                                   nn.Conv2d(in_channels=8, out_channels=64, kernel_size=3, stride=2),
                                   nn.ReLU(),
                                   nn.MaxPool2d(3, stride=2),
-#                                   nn.BatchNorm2d(64),
+                                  nn.BatchNorm2d(64),
 #                                   nn.Dropout2d(p=0.2),
                                   #nn.AvgPool2d()
 
@@ -258,7 +258,7 @@ class HydraNet(nn.Module):
                                   nn.Conv2d(in_channels=64, out_channels=256, kernel_size=3),
                                   nn.ReLU(),
                                   nn.MaxPool2d(3, stride=2),
-#                                   nn.BatchNorm2d(512),
+                                  nn.BatchNorm2d(256),
 #                                   nn.Dropout2d(p=0.2),
 
                                   #nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3),
@@ -270,8 +270,9 @@ class HydraNet(nn.Module):
                                   nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=2),
                                   nn.ReLU(),
                                   nn.MaxPool2d(2),
-#                                   nn.BatchNorm2d(1024)
+                                  nn.BatchNorm2d(512)
                                   )
+
 
  
         
@@ -282,18 +283,23 @@ class HydraNet(nn.Module):
             # nn.Dropout(p=0.1),
             nn.Linear(2 * 512, 256),
             nn.ReLU(),
+            nn.BatchNorm1d(256),
 #             nn.Dropout(p=0.1),
             nn.Linear(256, 64),
             nn.ReLU(),
+            nn.BatchNorm1d(64),
 #             nn.Dropout(p=0.1),
             nn.Linear(64, 64),
             nn.ReLU(),
+            nn.BatchNorm1d(64),
             # nn.Dropout(p=0.1),
             nn.Linear(64, 64),
             nn.ReLU(),
+            nn.BatchNorm1d(64),
             # nn.Dropout(p=0.1),
             nn.Linear(64, 64),
             nn.ReLU(),
+            nn.BatchNorm1d(64),
             # nn.Dropout(p=0.1),
             nn.Linear(64, 1))
 
@@ -363,7 +369,7 @@ for batch_x, batch_y in test_data:
     batch_pearson = pearsonr(preds.detach().numpy().squeeze(), batch_y.detach().numpy().squeeze())[0]
     test_pearson.append(batch_pearson)
     
-R = pearsonr(y_te.squeeze(), pred_te.squeeze())[0]
+R = pearsonr(y_te.squeeze(), np.concatenate(pred_te).squeeze())[0]
 print(f'Pearson R test score: {R:.5}', '\n')
 print(f'Test RMSE: {np.mean(test_rmse)}')
 
