@@ -180,9 +180,9 @@ def gen_loaders(x, y, means, stds, batch_size, augment_data=False, mode=None):
     return loader
 
     
-train_data = gen_loaders(x_tr, y_tr, means, stds, batch_size=16, augment_data=True, mode='train')
-# val_data = gen_loaders(x_val, y_val, 16)
+train_data = gen_loaders(x_tr, y_tr, means, stds, batch_size=16, augment_data=False, mode='train')
 val_data = gen_loaders(x_val, y_val, means, stds, batch_size=16, augment_data=False, mode=None)
+test_data = gen_loaders(x_te, y_te, means, stds, batch_size=16, augment_data=False, mode=None)
 
     
 class HydraNet(nn.Module):
@@ -191,82 +191,86 @@ class HydraNet(nn.Module):
         # feature map output: [(W - K + 2P) / S] + 1
         # include batch norm, dropout (remember model.train() and model.eval() !!!)
 #         self.fc_in = 1
-        self.cnn1 = nn.Sequential(nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3),
+        self.cnn1 =  nn.Sequential(nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3, stride=2),
                                   # output: (256-3)/2 + 1 =
                                   nn.ReLU(),
-                                  nn.MaxPool2d(2),
-                                  nn.BatchNorm2d(8),
-#                                   nn.Dropout2d(p=0.15),
+                                  nn.MaxPool2d(3, stride=2),
+#                                   nn.BatchNorm2d(8),
+#                                   nn.Dropout2d(p=0.2),
 
-                                  nn.Conv2d(in_channels=8, out_channels=64, kernel_size=3),
+                                  nn.Conv2d(in_channels=8, out_channels=64, kernel_size=3, stride=2),
                                   nn.ReLU(),
-                                  nn.MaxPool2d(2),
-                                  nn.BatchNorm2d(64),
+                                  nn.MaxPool2d(3, stride=2),
+#                                   nn.BatchNorm2d(64),
+#                                   nn.Dropout2d(p=0.2),
+                                  #nn.AvgPool2d()
+
+                                  #nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3),
+                                  #nn.ReLU(),
+                                  #nn.MaxPool2d(2),
+                                  #nn.BatchNorm2d(64),
 #                                   nn.Dropout2d(p=0.15),
                                   #nn.AvgPool2d()
 
-                                  nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3),
+                                  nn.Conv2d(in_channels=64, out_channels=256, kernel_size=3),
                                   nn.ReLU(),
-                                  nn.MaxPool2d(2),
-                                  nn.BatchNorm2d(64),
-#                                   nn.Dropout2d(p=0.15),
-                                  #nn.AvgPool2d()
+                                  nn.MaxPool2d(3, stride=2),
+#                                   nn.BatchNorm2d(512),
+#                                   nn.Dropout2d(p=0.2),
 
-                                  nn.Conv2d(in_channels=64, out_channels=512, kernel_size=3),
-                                  nn.ReLU(),
-                                  nn.MaxPool2d(2),
-                                  nn.BatchNorm2d(512),
-#                                   nn.Dropout2d(p=0.15),
-
-                                  nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3),
-                                  nn.ReLU(),
-                                  nn.MaxPool2d(2),
-                                  nn.BatchNorm2d(512),
+                                  #nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3),
+                                  #nn.ReLU(),
+                                  #nn.MaxPool2d(2),
+                                  #nn.BatchNorm2d(512),
 #                                   nn.Dropout2d(p=0.15),
 
-                                  nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=3),
+                                  nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=2),
                                   nn.ReLU(),
                                   nn.MaxPool2d(2),
-                                  nn.BatchNorm2d(1024)
+#                                   nn.BatchNorm2d(1024)
                                   )
 
-        self.cnn2 =  nn.Sequential(nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3),
+
+
+
+        
+        self.cnn2 =  nn.Sequential(nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3, stride=2),
                                   # output: (256-3)/2 + 1 =
                                   nn.ReLU(),
-                                  nn.MaxPool2d(2),
-                                  nn.BatchNorm2d(8),
-#                                   nn.Dropout2d(p=0.15),
+                                  nn.MaxPool2d(3, stride=2),
+#                                   nn.BatchNorm2d(8),
+#                                   nn.Dropout2d(p=0.2),
 
-                                  nn.Conv2d(in_channels=8, out_channels=64, kernel_size=3),
+                                  nn.Conv2d(in_channels=8, out_channels=64, kernel_size=3, stride=2),
                                   nn.ReLU(),
-                                  nn.MaxPool2d(2),
-                                  nn.BatchNorm2d(64),
+                                  nn.MaxPool2d(3, stride=2),
+#                                   nn.BatchNorm2d(64),
+#                                   nn.Dropout2d(p=0.2),
+                                  #nn.AvgPool2d()
+
+                                  #nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3),
+                                  #nn.ReLU(),
+                                  #nn.MaxPool2d(2),
+                                  #nn.BatchNorm2d(64),
 #                                   nn.Dropout2d(p=0.15),
                                   #nn.AvgPool2d()
 
-                                  nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3),
+                                  nn.Conv2d(in_channels=64, out_channels=256, kernel_size=3),
                                   nn.ReLU(),
-                                  nn.MaxPool2d(2),
-                                  nn.BatchNorm2d(64),
-#                                   nn.Dropout2d(p=0.15),
-                                  #nn.AvgPool2d()
+                                  nn.MaxPool2d(3, stride=2),
+#                                   nn.BatchNorm2d(512),
+#                                   nn.Dropout2d(p=0.2),
 
-                                  nn.Conv2d(in_channels=64, out_channels=512, kernel_size=3),
-                                  nn.ReLU(),
-                                  nn.MaxPool2d(2),
-                                  nn.BatchNorm2d(512),
-#                                   nn.Dropout2d(p=0.15),
-
-                                  nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3),
-                                  nn.ReLU(),
-                                  nn.MaxPool2d(2),
-                                  nn.BatchNorm2d(512),
+                                  #nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3),
+                                  #nn.ReLU(),
+                                  #nn.MaxPool2d(2),
+                                  #nn.BatchNorm2d(512),
 #                                   nn.Dropout2d(p=0.15),
 
-                                  nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=3),
+                                  nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=2),
                                   nn.ReLU(),
                                   nn.MaxPool2d(2),
-                                  nn.BatchNorm2d(1024)
+#                                   nn.BatchNorm2d(1024)
                                   )
 
  
@@ -275,22 +279,22 @@ class HydraNet(nn.Module):
         self.fc = nn.Sequential( 
             # nn.Linear(2048, 512),
             # nn.ReLU(),
-            nn.Dropout(p=0.1),
-            nn.Linear(2 * 1024, 64),
+            # nn.Dropout(p=0.1),
+            nn.Linear(2 * 512, 256),
             nn.ReLU(),
-            nn.Dropout(p=0.1),
+#             nn.Dropout(p=0.1),
+            nn.Linear(256, 64),
+            nn.ReLU(),
+#             nn.Dropout(p=0.1),
             nn.Linear(64, 64),
             nn.ReLU(),
-            nn.Dropout(p=0.1),
+            # nn.Dropout(p=0.1),
             nn.Linear(64, 64),
             nn.ReLU(),
-            nn.Dropout(p=0.1),
+            # nn.Dropout(p=0.1),
             nn.Linear(64, 64),
             nn.ReLU(),
-            nn.Dropout(p=0.1),
-            nn.Linear(64, 64),
-            nn.ReLU(),
-            nn.Dropout(p=0.1),
+            # nn.Dropout(p=0.1),
             nn.Linear(64, 1))
 
     def forward(self, x1):
@@ -315,7 +319,7 @@ class HydraNet(nn.Module):
 
 # model = HydraNet()
 num_epochs = 100 
-learning_rate = 5e-3
+learning_rate = 1e-4
 
 # If a GPU is available
 if not torch.cuda.is_available():
@@ -345,8 +349,24 @@ model_hydra.eval().to("cpu")
 log.write(str(model_hydra.parameters))
 log.write(str(optimizer))
 
-pred_te = model_hydra.forward(torch.from_numpy(x_te))
-pred_te = pred_te.cpu().detach().numpy()
+n = 0
+test_rmse = []
+test_pearson = []
+pred_te = []
+for batch_x, batch_y in test_data:
+    preds = model_hydra(batch_x).detach()
+    pred_te.append(preds.numpy().squeeze())
+    
+    batch_mse = torch.sqrt(torch.mean(torch.square(preds - batch_y))).item()
+    test_rmse.append(batch_mse)
+    
+    batch_pearson = pearsonr(preds.detach().numpy().squeeze(), batch_y.detach().numpy().squeeze())[0]
+    test_pearson.append(batch_pearson)
+    
 R = pearsonr(y_te.squeeze(), pred_te.squeeze())[0]
 print(f'Pearson R test score: {R:.5}', '\n')
-print(f'Test RMSE: {torch.sqrt(criterion(torch.tensor(pred_te), torch.tensor(y_te)))}')
+print(f'Test RMSE: {np.mean(test_rmse)}')
+
+log.write(str(pred_te), '\n')
+log.write(f"Test Pearson R: {R}")
+log.write(f"Test RMSE: {np.mean(test_rmse)}")
